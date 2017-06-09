@@ -32,7 +32,8 @@ public class TFBSMain {
                                   "PWMprint", 
                                   "ROEFinder", 
                                   "Scan", 
-                                  "Thresholds" };
+                                  "Thresholds",
+                                  "GenFeaturesByNT"};
 
         HashSet <String> commands = new HashSet <String>();
         for (int i = 0; i < command_list.length; i++) commands.add(command_list[i]);
@@ -70,7 +71,6 @@ public class TFBSMain {
             for (int i = 1; i < args.length; i++) {
                 new_args[i - 1] = args[i];
             }
-
             // Primary scanning programs
             if (command.equals("Scan")) {
                 Scan.main(new_args);

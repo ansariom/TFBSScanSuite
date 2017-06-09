@@ -774,33 +774,6 @@ public class GenFeaturesByNT {
             .required(false)
             .build());
 
-        // flanking windows string for generating features from flanking sequence
-        options.addOption(Option.builder()
-            .longOpt("flankingWindows")
-            .hasArg(true)
-            .argName("WindowLength NumWindows")
-            .desc("If specified, generates additional features for each TSS centered upstream and downstream. " +
-                  "Generates NumWindows additional features on each side of TSS, going up to WindowLength away from site." +
-                  "(default: no flanking windows are used)")
-            .required(false)
-            .build());
-
-        // Output data in binary format
-        options.addOption(Option.builder("b")
-            .longOpt("bin")
-            .hasArg(false)
-            .desc("Output data in binary format.")
-            .required(false)
-            .build());
-
-        // Output scores on a per-nucleotide basis for each ROE scanned
-        options.addOption(Option.builder("y")
-            .longOpt("byNT")
-            .hasArg(false)
-            .desc("Output scores on a per-nucleotide basis for each ROE scanned.  Turns off reporting of flanking features and sequence content features (i.e. GC/GA/CA content)")
-            .required(false)
-            .build());
-
         return options;
     }
 
@@ -914,9 +887,6 @@ public class GenFeaturesByNT {
             OPTS_ORDER.add("pseudoCounts");
             OPTS_ORDER.add("nucsAfterTSS");
             OPTS_ORDER.add("seqName");
-            OPTS_ORDER.add("flankingWindows");
-            OPTS_ORDER.add("bin");
-            OPTS_ORDER.add("byNT");
         }
 
         public int compare(T o1, T o2) {
