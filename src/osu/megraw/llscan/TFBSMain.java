@@ -54,7 +54,8 @@ public class TFBSMain {
                        "             critical value (FP, FN, and MAX - the maximum of FP & FN).\n\n" +
                        "PWMprint:    This utility generates normalized PWMs and can add 'pseudo counts'\n" +
                        "             to matrices prior to normalization to avoid problems with logs of '0'.\n\n" +
-                       "MakePWMs:    This utility generates PWMs from a list of sequences.\n\n";
+                       "MakePWMs:    This utility generates PWMs from a list of sequences.\n\n" +
+                       "GenFeaturesByNT: Generates loglik scores for each individual nucleotide within ROE windows\n\n";
 
         if (args.length < 1) {
             System.out.print(usage);
@@ -88,6 +89,8 @@ public class TFBSMain {
                 PWMprint.main(new_args);
             } else if (command.equals("MakePWMs")) {
                 MakePWMs.main(new_args);
+            } else if (command.equals("GenFeaturesByNT")) {
+                GenFeaturesByNT.main(new_args);
             }
         } else {
             System.out.print(usage);
