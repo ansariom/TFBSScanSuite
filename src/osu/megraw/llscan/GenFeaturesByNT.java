@@ -127,13 +127,20 @@ public class GenFeaturesByNT {
             seqLabels[i] = header_parts[0];
         }
 
-        // Read score threshold file corresponding to PWM file
-        Scores = Load.loadDoubleColumnFile(new File(scoreCutoffs_Fname));
 
         // Read PWM file, store rev comp PWMs for scanning opposite strand
         double PseudoCountsVal = 0.0;  // Read as pre-processed PWMs
         PWMReturn pwms = Load.loadPWMFileSimpleHeader(pwms_Fname, PseudoCountsVal);
         pwms.ComputeRevCmpPWMs();
+        
+        // Read score threshold file corresponding to PWM file
+        if (scoreCutoffs_Fname != null) {
+            Scores = Load.loadDoubleColumnFile(new File(scoreCutoffs_Fname));
+        } else {
+            // No threshold was given - assume that threshold will be zero
+            Scores = new DoubleColReturn(pwms.labels);
+        }
+
 
         // Read factor information file corresponding to PWM file
         DoubleMatReturn facInfo_FWD = Load.loadDoubleMatrixFile(new File(factorInfo_FWD_Fname), true);
