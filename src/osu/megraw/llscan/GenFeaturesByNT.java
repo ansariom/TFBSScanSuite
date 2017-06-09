@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
@@ -13,6 +14,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 /**
  * <p>Title: Log Likelihood Scanner Project</p>
@@ -35,6 +44,23 @@ public class GenFeaturesByNT {
                                            {0.25, 0.25, 0.25, 0.25},
                                            {0.25, 0.25, 0.25, 0.25},
                                            {0.25, 0.25, 0.25, 0.25}};
+    // CLI optional arguments
+    public static boolean help = false;
+    public static int seqLength = -1;
+    public static String posArrString = "0";
+    public static int nucsAfterTSS = -1;
+    public static String scoreCutoffs_Fname = null;
+    public static int BG_WIN = 250;
+    public static int nproc = 1;
+    public static String processPeak = null;
+    public static double PseudoCountsVal = 0.01; // SHAWN: was 0.25
+    public static String factorInfo_FWD_Fname;
+    public static String factorInfo_REV_Fname;
+    public static String promoterSeqs_Fname;
+    public static String pwms_Fname;
+    public static String out_Fname;
+    public static String map_Fname = null;
+
 
     public GenFeaturesByNT() {
     }
@@ -42,31 +68,33 @@ public class GenFeaturesByNT {
     public static void main(String[] args) throws java.io.IOException, java.lang.InterruptedException {
     	GenFeaturesByNT ss = new GenFeaturesByNT();
 
+    	parseArgs(args);
+    	
         char[][] S;
         DoubleColReturn Scores;
 
-        String posArrString = args[0];
-        int nucsAfterTSS = Integer.parseInt(args[1]);
-        String factorInfo_FWD_Fname = args[2];
-        String factorInfo_REV_Fname = args[3];
-        String promoterSeqs_Fname = args[4];
-        String scoreCutoffs_Fname = args[5];
-        String pwms_Fname = args[6];
-        int BG_WIN = Integer.parseInt(args[7]);
-        String out_Fname = args[8];
-        int nproc = Runtime.getRuntime().availableProcessors();
+//        String posArrString = args[0];
+//        int nucsAfterTSS = Integer.parseInt(args[1]);
+//        String factorInfo_FWD_Fname = args[2];
+//        String factorInfo_REV_Fname = args[3];
+//        String promoterSeqs_Fname = args[4];
+//        String scoreCutoffs_Fname = args[5];
+//        String pwms_Fname = args[6];
+//        int BG_WIN = Integer.parseInt(args[7]);
+//        String out_Fname = args[8];
+//        int nproc = Runtime.getRuntime().availableProcessors();
 
-        String processPeak = null;
-        if (args.length >= 10) {
-            if (args[9].charAt(0) != '-') {
-                processPeak = args[9];
-                System.out.println("Processing Peak "+processPeak);
-            }
-        }
-        if (args.length >= 11) {
-            nproc = Integer.parseInt(args[10]);
-            System.out.println("Using "+nproc+" processors");
-        }
+//        String processPeak = null;
+//        if (args.length >= 10) {
+//            if (args[9].charAt(0) != '-') {
+//                processPeak = args[9];
+//                System.out.println("Processing Peak "+processPeak);
+//            }
+//        }
+//        if (args.length >= 11) {
+//            nproc = Integer.parseInt(args[10]);
+//            System.out.println("Using "+nproc+" processors");
+//        }
 
         // Read promoter sequences file
         FastaReturn Seqs;
@@ -74,7 +102,23 @@ public class GenFeaturesByNT {
         S = new char[Seqs.lines.length][];
         for (int i = 0; i < Seqs.lines.length; i++) {
             S[i] = Seqs.lines[i].toCharArray();
+            
+            if (seqLength == -1) seqLength = S[i].length;
+
+            if (seqLength != S[i].length) {
+                System.err.println("Error: input FASTA sequences of different length found with (" + Seqs.headers[i] + ")");
+                return;
+            }
         }
+        
+        // no TSS offset given - autoset it to midpoint of input sequence length
+        if (nucsAfterTSS == -1) {
+            // For odd length sequences, half the length of the sequence rounded down will be midpoint since
+            // sequences are 0-indexed (i.e. a sequence 10001 nt long needs nucsAfterTSS=5000 to set the TSS
+            // at the midpoint, i.e. character 5001 in a 1-index based setting)
+            nucsAfterTSS = seqLength / 2;  // integer arithmetic - automatically floors
+        }
+
         // Get labels for seqs
         String[] seqLabels = new String[Seqs.headers.length];
         for (int i = 0; i < seqLabels.length; i++) {
@@ -638,4 +682,245 @@ public class GenFeaturesByNT {
 
     }
 
+    private static Options buildOptions() {
+        Options options = new Options();
+
+        // help
+        options.addOption(Option.builder("h")
+            .longOpt("help")
+            .hasArg(false)
+            .desc("Print this helpful help message")
+            .required(false)
+            .build());
+
+        // the number of processors to use
+        options.addOption(Option.builder("n")
+            .longOpt("nprocs")
+            .hasArg(true)
+            .argName("INT")
+            .desc("Number of processors to use (default: 1)")
+            .required(false)
+            .type(Integer.class)
+            .build());
+
+        // string to specify where to center scans for generating features
+        options.addOption(Option.builder()
+            .longOpt("pos")
+            .hasArg(true)
+            .argName("Position String")
+            .desc("Position String: String describing where to scan from. One of:\n" +
+                  "\"N\": A number indicating the location to sample from (relative to TSS of sequence)\n\n" +
+                  "\"Rand [ndraws] [draw_start] [draw_stop]\": Choose [ndraws] random locations between [draw_start] and [draw_stop])\n\n" +
+			      "\"Range [i] [range_start] [range_stop]\": Scan every [i] nucleotides between [range_start] and [range_stop])\n" + 
+			      "\"Replicate [filename]\": Scan every nucleotide defined in [filename])\n" + 
+                  "(default: 0 - i.e., only generate features from TSS of sequence)")
+            .required(false)
+            .build());
+
+        // sequence to limit scans to
+        options.addOption(Option.builder()
+            .longOpt("seqName")
+            .hasArg(true)
+            .argName("SEQNAME")
+            .desc("Limit ROE scans to sequence <SEQNAME>.")
+            .required(false)
+            .build());
+
+        // the offset to adjust the TSS position in the input sequence
+        options.addOption(Option.builder("N")
+            .longOpt("nucsAfterTSS")
+            .hasArg(true)
+            .argName("INT")
+            .desc("Offset from end point of input sequence for TSS (default: midpoint of input sequence)")
+            .required(false)
+            .type(Integer.class)
+            .build());
+
+        // the pseudo-count value to adjsut PWM frequencies by
+        options.addOption(Option.builder()
+            .longOpt("pseudoCounts")
+            .hasArg(true)
+            .argName("COUNT")
+            .desc("Total pseudo-counts to add to PWM matrix prior to normalization (default: 0.25)")
+            .required(false)
+            .type(Double.class)
+            .build());
+            
+        // length of background window used for local background sequence calculations
+        options.addOption(Option.builder("B")
+            .longOpt("BGWIN")
+            .hasArg(true)
+            .argName("INT")
+            .desc("Background Window size used for calculating local sequence background distribution (default: 250)")
+            .required(false)
+            .build());
+
+        // score threshold file
+        options.addOption(Option.builder()
+            .longOpt("minScores")
+            .hasArg(true)
+            .argName("FILENAME")
+            .desc("file to read mininum threshold scores for scans to be added (default: all thresholds set to 0)")
+            .required(false)
+            .build());
+
+        // score threshold file
+        options.addOption(Option.builder()
+            .longOpt("mapFile")
+            .hasArg(true)
+            .argName("FILENAME")
+            .desc("file to output how scanned features are mapped to genomic coordinates.  (Note: requires that FASTA headers of your input sequences are formatted as follows \"><FASTAID>_<REFSEQ>_<START>\" " +
+                  "where  <REFSEQ> is the reference sequence this FASTA sequence comes from, and <START> is the integer location where the sequence begins (1-indexed)")
+            .required(false)
+            .build());
+
+        // flanking windows string for generating features from flanking sequence
+        options.addOption(Option.builder()
+            .longOpt("flankingWindows")
+            .hasArg(true)
+            .argName("WindowLength NumWindows")
+            .desc("If specified, generates additional features for each TSS centered upstream and downstream. " +
+                  "Generates NumWindows additional features on each side of TSS, going up to WindowLength away from site." +
+                  "(default: no flanking windows are used)")
+            .required(false)
+            .build());
+
+        // Output data in binary format
+        options.addOption(Option.builder("b")
+            .longOpt("bin")
+            .hasArg(false)
+            .desc("Output data in binary format.")
+            .required(false)
+            .build());
+
+        // Output scores on a per-nucleotide basis for each ROE scanned
+        options.addOption(Option.builder("y")
+            .longOpt("byNT")
+            .hasArg(false)
+            .desc("Output scores on a per-nucleotide basis for each ROE scanned.  Turns off reporting of flanking features and sequence content features (i.e. GC/GA/CA content)")
+            .required(false)
+            .build());
+
+        return options;
+    }
+
+    private static void parseArgs(String[] args) {
+        // Setup CLI to simplify GenFeatures interface;
+        Options options = buildOptions();
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmdLine;
+
+        try {
+            cmdLine = parser.parse(options, args);
+
+            // Remove arguments that were parsed
+            args = new String[cmdLine.getArgList().size()];
+            args = cmdLine.getArgList().toArray(args);
+
+            if (cmdLine.hasOption("help")) {
+                help = true;
+            } else {
+                if (args.length < 5) {
+                    throw new ParseException("Must supply a FWD & REV ROE tables, FASTA file, PWM file and output file name.");
+                } else {
+                    factorInfo_FWD_Fname = args[0];
+                    factorInfo_REV_Fname = args[1];
+                    promoterSeqs_Fname = args[2];
+                    pwms_Fname = args[3];
+                    out_Fname = args[4];
+                }
+
+                if (cmdLine.hasOption("nprocs")) {
+                   nproc = Integer.parseInt(cmdLine.getOptionValue("nprocs"));
+                   if (nproc > Runtime.getRuntime().availableProcessors()) {
+                       System.err.println("Warning: your system does not have " + nproc + " CPUs: setting nprocs to " + Runtime.getRuntime().availableProcessors() + ".");
+                  
+                       nproc = Runtime.getRuntime().availableProcessors();
+                   }
+                   if (nproc < 1) {
+                       System.err.println("Warning: nprocs must be a value >= 1. Setting nprocs = 1");
+                       nproc = 1;
+                   }
+                }
+
+                if (cmdLine.hasOption("BGWIN")) {
+                    BG_WIN = Integer.parseInt(cmdLine.getOptionValue("BGWIN"));
+                }
+
+                if (cmdLine.hasOption("minScores")) {
+                    scoreCutoffs_Fname = cmdLine.getOptionValue("minScores");
+                }
+
+                if (cmdLine.hasOption("mapFile")) {
+                    map_Fname = cmdLine.getOptionValue("mapFile");
+                }
+
+                if (cmdLine.hasOption("nucsAfterTSS")) {
+                    nucsAfterTSS = Integer.parseInt(cmdLine.getOptionValue("nucsAfterTSS"));
+                }
+
+                if (cmdLine.hasOption("pseudoCounts")) {
+                    PseudoCountsVal = Double.parseDouble(cmdLine.getOptionValue("pseudoCounts"));
+                }
+
+                if (cmdLine.hasOption("seqName")) {
+                    String seqName = cmdLine.getOptionValue("seqName");
+                    if (seqName.charAt(0) != '-') {
+                        processPeak = seqName;
+                        System.out.println("Processing Peak "+processPeak);
+                    }
+                }
+
+                if (cmdLine.hasOption("pos")) {
+                    posArrString = cmdLine.getOptionValue("pos");
+                }
+            }
+        }
+        catch (ParseException e) {
+            System.out.println("Parse Error: " + e.getMessage());
+            System.out.println();
+            help = true;
+        }
+        catch (NumberFormatException e) {
+            System.out.println("Unexpected formatting problem: " + e.getMessage());
+            e.printStackTrace();
+            help = true;
+        }
+
+        if (help) {
+            OptionComparator opt_order = new OptionComparator();
+            String cmdLineSyntax = "java -jar GenFeaturesByNT tfbs_scan.jar <FWD_ROEs.table> <REV_ROEs.table> <sequence.fasta> <PWM_FILE> <Outfile.rdat>";
+            String header = "\nJava tool for generating features within regions of enrichment for loglikelihood " + 
+                            "scans of FASTA sequences. Note: All matrices in <PWM_FILE> are assumed to be frequency matrices - not probabilities\n\nOPTIONS\n\n";
+            String footer = "";
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.setOptionComparator(opt_order);
+            formatter.setWidth(120);
+            formatter.printHelp(cmdLineSyntax, header, options, footer, true);
+            System.exit(0);
+        }
+    }
+    
+    private static class OptionComparator <T extends Option> implements Comparator <T> {
+        private ArrayList <String> OPTS_ORDER = new ArrayList <String> ();
+
+        public OptionComparator () {
+            OPTS_ORDER.add("help");
+            OPTS_ORDER.add("pos");
+            OPTS_ORDER.add("nprocs");
+            OPTS_ORDER.add("BGWIN");
+            OPTS_ORDER.add("minScores");
+            OPTS_ORDER.add("mapFile");
+            OPTS_ORDER.add("pseudoCounts");
+            OPTS_ORDER.add("nucsAfterTSS");
+            OPTS_ORDER.add("seqName");
+            OPTS_ORDER.add("flankingWindows");
+            OPTS_ORDER.add("bin");
+            OPTS_ORDER.add("byNT");
+        }
+
+        public int compare(T o1, T o2) {
+            return OPTS_ORDER.indexOf(o1.getLongOpt()) - OPTS_ORDER.indexOf(o2.getLongOpt());
+        }
+    }
 }
