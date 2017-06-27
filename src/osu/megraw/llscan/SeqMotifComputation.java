@@ -48,10 +48,10 @@ public class SeqMotifComputation {
 			String line = null;
 			while ((line = bufferedReader.readLine()) != null) {
 				String[] parts = line.split("\t");
-				String motifSeq = parts[26];
-				String flankingSeq = parts[27];
-				String winStrand = parts[17];
-				String pwmName = parts[16];
+				String motifSeq = parts[25];
+				String flankingSeq = parts[26];
+				String winStrand = parts[16];
+				String pwmName = parts[15];
 				
 				double[][] pwm = pwmMatrixHash.get(pwmName);
 				if (pwm == null) {
