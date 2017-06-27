@@ -33,7 +33,8 @@ public class TFBSMain {
                                   "ROEFinder", 
                                   "Scan", 
                                   "Thresholds",
-                                  "GenFeaturesByNT"};
+                                  "GenFeaturesByNT",
+                                  "SeqMotifComputation"};
 
         HashSet <String> commands = new HashSet <String>();
         for (int i = 0; i < command_list.length; i++) commands.add(command_list[i]);
