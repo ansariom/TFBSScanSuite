@@ -56,7 +56,8 @@ public class TFBSMain {
                        "PWMprint:    This utility generates normalized PWMs and can add 'pseudo counts'\n" +
                        "             to matrices prior to normalization to avoid problems with logs of '0'.\n\n" +
                        "MakePWMs:    This utility generates PWMs from a list of sequences.\n\n" +
-                       "GenFeaturesByNT: Generates loglik scores for each individual nucleotide within ROE windows\n\n";
+                       "GenFeaturesByNT: Generates loglik scores for each individual nucleotide within ROE windows\n\n" +
+        			    "SeqMotifComputation: computes seq motif-related stats such as loglik score in M0 or M1, and Fp/FN rate of seqs with respect to BG/FG dist.\n\n";
 
         if (args.length < 1) {
             System.out.print(usage);
