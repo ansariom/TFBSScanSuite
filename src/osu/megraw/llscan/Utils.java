@@ -1,8 +1,12 @@
 package osu.megraw.llscan;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -26,6 +30,48 @@ import java.util.List;
  * */
 
 public class Utils {
+	private static void writePWMtoWMMFile(String outfile, double [][]pwm) throws IOException {
+        PrintWriter writer = new PrintWriter(outfile);
+
+        // Write out the header of the WMM file
+        writer.println("WMM");
+        writer.println("PROMOTER");
+        // 0 = cutoff (doesn't appear to be used in get-WMM-cutoff)
+        // pwm.length = the length of the pwm sequence
+        // 5 = number of columns represented as A,C,G,N, and T (in that order) - N isn't found in the PWM matrix format, only four columns exist
+        writer.println("0 " + pwm.length + " 5");
+
+        // pwm[0].length = consensus window length which is equal to the pwm sequence length
+        // 0 and 0 refer to the consensus offset (which we aren't setting, hence needs to be 0),
+        // and the consensus sequence length, respectively - neither are needed so just set to 0
+        // + refers to the strand, and all threshold calculations are made with respect to the FWD strand
+        writer.println(pwm.length + " 0 0 +");
+
+        for (int j = 0; j < pwm.length; j++) {
+            String logPs = "";
+            for (int i = 0; i < 5; i++) {
+                // Write out 'N' value as '-inf' since we don't need it
+                if (i == 3) {
+                    logPs += "\t-inf";
+                } else {
+                    int nt_index = i;
+
+                    // Adjust nt_index to account for the '-inf' value needed for WMM matrix which isn't present in PWM matrix
+                    if (nt_index == 4) {
+                        nt_index = 3;
+                    }
+                    // Only prepend a tab to values betyond the first value
+                    if (nt_index != 0) {
+                        logPs += "\t";
+                    }
+                    logPs += Double.toString(Math.log(pwm[j][nt_index]));
+                }
+            }
+            writer.println(logPs);
+        }
+        writer.close();
+    }
+
     public static double getSeqContent(int L, int R, char[] S, int beyondTSS, char[] bases) {
 
         // Convert window positions to array indices
@@ -594,5 +640,90 @@ public class Utils {
 
         return syscom;
     }
+    
+    /**
+     * @author mitra
+     */
+	public static  double computeLogLikScoreForStringUsingM0(String seq, int windowLength, double[][] pwmFreq, double[] bgFreq) {
+		double logLikScore = 0d;
+		String diNts = "ACGT";
+		char[] seqArr = seq.toCharArray();
+		BigDecimal numLog = new BigDecimal(0);
+		BigDecimal dnumLog = new BigDecimal(0);
+		int currentCharIdx = diNts.indexOf(seqArr[0]);
+		for (int i = 0; i < windowLength; i++) {
+			BigDecimal bgFrq = null;
+			bgFrq = new BigDecimal(bgFreq[currentCharIdx]);
+			currentCharIdx = diNts.indexOf(seqArr[i]);
+			dnumLog = dnumLog.add(new BigDecimal(Math.log(bgFrq.doubleValue())));
+			
+			BigDecimal fgFrq = new BigDecimal(pwmFreq[i][currentCharIdx]);
+			numLog = numLog.add(new BigDecimal(Math.log(fgFrq.doubleValue())));
+		}
+		logLikScore = numLog.subtract(dnumLog).doubleValue();
+		return logLikScore;
+		
+	}
+
+    /**
+     * @author mitra
+     */
+	public static String getRevComplement(String string) {
+		String revStr = new StringBuilder(string).reverse().toString();
+		 //calculate reverse complement
+		revStr = revStr.replace("A", "t").replace("T", "a").
+		        replace("C", "g").replace("G", "c").toUpperCase();
+       return revStr;
+	}
+	
+    /**
+     * @author mitra
+     */
+	// Load PWM
+	public static double[][] getPWM(String inputPWMsFile, String pwmName) {
+		List<List<Double>> pwmList = new ArrayList<List<Double>>();
+		double[][] pwm = null;
+		try {
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(inputPWMsFile)));
+			String line = null;
+			boolean foundPWM = false;
+			String pLine = "";
+			int row = 0;
+			while ((line = bufferedReader.readLine()) != null) {
+				if (line.startsWith(">")) {
+					if (!line.substring(2).equalsIgnoreCase(pwmName)) continue;
+					foundPWM = true;
+					pLine = ">";
+				} else if (line.startsWith("=")){
+					if (!foundPWM) continue;
+					pLine = "=";
+					String[] freqs = line.split("\t");
+					pwmList.add(new ArrayList<Double>());
+					for (int i = 1; i < freqs.length; i++) {
+						pwmList.get(row).add(new BigDecimal(freqs[i]).doubleValue());
+					}
+					row++;
+					
+				} else {
+					if (foundPWM && pLine.equalsIgnoreCase("="))
+						break;
+					pLine = "";
+				}
+			}
+			bufferedReader.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		pwm = new double[pwmList.size()][4];
+		for (int i = 0; i < pwmList.size(); i++) {
+			for (int j = 0; j < 4; j++) {
+				pwm[i][j] = pwmList.get(i).get(j);
+			}
+		}
+		return pwm;
+	}
+	
+	
+
 
 }

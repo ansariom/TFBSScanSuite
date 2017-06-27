@@ -91,6 +91,8 @@ public class TFBSMain {
                 MakePWMs.main(new_args);
             } else if (command.equals("GenFeaturesByNT")) {
                 GenFeaturesByNT.main(new_args);
+            } else if (command.equals("SeqMotifComputation")) {
+            	SeqMotifComputation.main(new_args);
             }
         } else {
             System.out.print(usage);
