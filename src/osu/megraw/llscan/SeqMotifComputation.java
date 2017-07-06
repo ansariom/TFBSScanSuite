@@ -18,6 +18,8 @@ public class SeqMotifComputation {
 	private static String histDir;
 	private static String outFile;
 	private static double[] bgFrequenciesMarkov0 = {0.3486, 0.1599,	0.1498,	0.3417 };
+	private static HashMap<String, List<String>> bgHash = new HashMap<>();
+	private static HashMap<String, List<String>> fgHash = new HashMap<>();
 	
 	public static void main(String[] args) {
 		if (args.length < 4) {
@@ -61,9 +63,22 @@ public class SeqMotifComputation {
 				
 				if (winStrand.equalsIgnoreCase("REV"))
 					motifSeq = Utils.getRevComplement(motifSeq);
-				double logLikeScoreM0 = Utils.computeLogLikScoreForStringUsingM0(motifSeq, motifSeq.length(), pwm, bgFrequenciesMarkov0);
-				double fpRateM0 = computeFP(logLikeScoreM0, loadBGHistogram(histDir + "/" + pwmName + ".hbin"));
-				double fnRateM0 = computeFP(logLikeScoreM0, loadFGHistogram(histDir + "/" + pwmName + ".hbin"));
+				double logLikeScoreM0 = Utils.computeLogLikScoreForStringUsingM0(motifSeq, motifSeq.length(), pwm, bgFrequenciesMarkov0); 
+				
+				List<String> bgPWMHist = bgHash.get(pwmName);
+				if (bgPWMHist == null) {
+					bgPWMHist = loadBGHistogram(histDir + "/" + pwmName + ".hbin");
+					bgHash.put(pwmName, bgPWMHist);
+				}
+				
+				List<String> fgPWMHist = fgHash.get(pwmName);
+				if (fgPWMHist == null) {
+					fgPWMHist = loadFGHistogram(histDir + "/" + pwmName + ".hbin");
+					fgHash.put(pwmName, fgPWMHist);
+				}
+				
+				double fpRateM0 = computeFP(logLikeScoreM0, bgPWMHist);
+				double fnRateM0 = computeFN(logLikeScoreM0, fgPWMHist);
 				writer.write(line.substring(0, line.length() - 1) + "\t" +  
 						Utils.getRevComplement(motifSeq) + "\t" + Utils.getRevComplement(flankingSeq) + "\t" +
 						fpRateM0 + "\t" + fnRateM0 + "\t" + logLikeScoreM0 + "\n");
@@ -95,6 +110,23 @@ public class SeqMotifComputation {
 		fp = new BigDecimal(1).subtract(auP).doubleValue();
 		return fp;
 	}
+	
+	public static double computeFN(double loglikScore, List<String> bins) {
+		double fn = 0.0;
+		BigDecimal auP = new BigDecimal(0);
+		
+		for (int i = 0; i < bins.size(); i++) {
+			BigDecimal lb = new BigDecimal(bins.get(i).split("_")[0]);
+			if (new BigDecimal(loglikScore).compareTo(lb) == 1) {
+				BigDecimal binHeight = new BigDecimal(bins.get(i).split("_")[1]);
+				auP = auP.add(binHeight);
+			} else
+				break;
+		}
+		
+		return auP.doubleValue();
+	}
+
 
 	/**
 	 * Background histograms start from first line up to (nbin) (depends on number of bins)
@@ -134,12 +166,19 @@ public class SeqMotifComputation {
 		try {
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(histFile))));
 			String line = bufferedReader.readLine();
-			
-			while (line != null && !line.equalsIgnoreCase("")) {
-				BigDecimal lb = new BigDecimal(line.split("\t")[0].split(",")[1]);
-				BigDecimal ub = new BigDecimal(line.split("\t")[0].split(",")[2]);
-				histList.add(lb.toString() + "_" + line.split("\t")[1]);
+			boolean secondPart = false;
+			while (line != null && !line.equalsIgnoreCase("") && !secondPart) {
 				line = bufferedReader.readLine();
+				if (line == null || line.equalsIgnoreCase("") && !secondPart) {
+					secondPart = true;
+					line = bufferedReader.readLine();
+					while (line != null && !line.equalsIgnoreCase("")) {
+						BigDecimal lb = new BigDecimal(line.split("\t")[0].split(",")[1]);
+						BigDecimal ub = new BigDecimal(line.split("\t")[0].split(",")[2]);
+						histList.add(lb.toString() + "_" + line.split("\t")[1]);
+						line = bufferedReader.readLine();
+					}
+				}
 			}
 			bufferedReader.close();
 		} catch (Exception e) {
