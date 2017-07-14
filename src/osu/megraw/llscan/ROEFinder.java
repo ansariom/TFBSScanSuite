@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -224,189 +225,77 @@ public class ROEFinder {
         // Open file for printing observations
         PrintWriter outFileLocs = null;
         PrintWriter outFileCumScores = null;
-        PrintWriter outFileTables = null;
+//        PrintWriter outFileTables = null;
 
+        List<Future<String>> submittedPlots = new ArrayList<Future<String>>();
+        
         for (int strandNum = 0; strandNum < totalStrands; strandNum++) {
             strand = (totalStrands == 2)? strands[strandNum] : strand;
+//            System.out.println(strand);
 
             // We're printing out next strand results - close prev strand files and open new ones
             if (strandNum == 1) {
                 outFileLocs.close();
                 outFileCumScores.close();
-                outFileTables.close();
+//                outFileTables.close();
             }
 
             outFileLocs = new PrintWriter(new FileWriter(out_Fname + "." + strand + ".locs"));
             outFileCumScores = new PrintWriter(new FileWriter(out_Fname + "." + strand + ".cumscores"));
-            outFileTables = new PrintWriter(new FileWriter(out_Fname + "." + strand + ".table"));
+//            outFileTables = new PrintWriter(new FileWriter(out_Fname + "." + strand + ".table"));
 
             // Calculate the cumulative score for all sequences scanned by each PWM for the given strand
             Hashtable <String, Hashtable <Integer, Double>> pwmResults = Utils.getCumScore(results, strand);
     
             // Print ROE table header
-            outFileTables.println("MaxPeakLoc\tHalfWidth\tLeft\tRight");
+//            outFileTables.println("MaxPeakLoc\tHalfWidth\tLeft\tRight");
             for (int nmat = 0; nmat < pwms.pwms.length; nmat++) {
                 Hashtable <Integer, Double> cshash = null;
     
                 if (pwmResults.containsKey(pwms.labels[nmat])) cshash = pwmResults.get(pwms.labels[nmat]);
-    
-                // Print locations and cumulative scores
-                outFileLocs.print(pwms.labels[nmat]);
-                outFileCumScores.print(pwms.labels[nmat]);
-    
                 if (cshash != null) {
                     ArrayList<Integer> keys = new ArrayList<Integer>(cshash.keySet());
                     Collections.sort(keys);
                     ArrayList <Double> values = new ArrayList <Double>();
     
-                    // Values carried over from compute_table.R script for generating ROE tables
-                    double maxbgval = 0.0;
-                    int totalGoodVals = 0;
-                    double maxht = -1.0;
-                    int maxind = -1;
-                    int maxloc = -1;
-                    for (int i = 0; i < keys.size(); i++) {
+	                // Print locations and cumulative scores
+	                outFileLocs.print(pwms.labels[nmat]);
+	                outFileCumScores.print(pwms.labels[nmat]);
+	                outFileLocs.print("\n");
+	                outFileCumScores.print("\n");
+	                
+	                for (int i = 0; i < keys.size(); i++) {
                         Integer loc =  keys.get(i);
                         Double cumscore = cshash.get(loc);
                         values.add(cumscore);
                         outFileLocs.print("\t" + loc );
                         outFileCumScores.print("\t" + Print.df2.format(cumscore.doubleValue()));
     
-                        if (loc < maxUpstreamDist || loc > maxDownstreamDist) {
-                            maxbgval += cumscore.doubleValue();
-                            totalGoodVals++;
-                        }
-    
-                        if (maxht == -1.0) maxht = cumscore.doubleValue();
-    
-                        if (cumscore.doubleValue() >= maxht) {
-                            maxht = cumscore.doubleValue();
-                            maxind = i;
-                            maxloc = loc.intValue();
-                        } 
                     }
-                    maxbgval /= (double) totalGoodVals;
-    
-                    String formattedDouble = Print.df2.format(maxbgval);
-                    maxbgval = Double.parseDouble(formattedDouble);
-                    
-                    // Do not print out ROEValues if the maximum score lies beyond
-                    // the maximum distance of our ROE scan regions or no good background value was identified (maxind == -1)
-                    //boolean printROEValues = (maxloc < maxUpstreamDist || maxloc > maxDownstreamDist || maxind == -1)? false : true;
-                    boolean printROEValues = (maxloc < maxUpstreamDist || maxloc > maxDownstreamDist)? false : true;
-    
-                    // Let user know when an ROE goes out fairly far from site of TSS (likely not looking
-                    // at a core promoter element in these types of cases)
-                    if (maxloc < -500 || maxloc > 500) {
-                        //System.out.println("PWM: " + pwms.labels[nmat] + " has maxht " + maxht + " at " + maxind); 
-                    }
-    
-                    if (printROEValues) {
-                        // Logic for generating ROE half-widths
-                        int buffer = 5;
-        
-                        // Search left
-                        int leftind = maxind;
-                        int nBelow = 0;
-                        while (nBelow < buffer) {
-                            if (leftind >= keys.size() || leftind < 0) {
-                                System.out.println("NOOOO " + pwms.labels[nmat] + " maxht " + maxht + " maxind " + maxind);
-                                if (leftind < 0) {
-                                    leftind = 0;
-                                } else if (leftind >= keys.size()) {
-                                    leftind = keys.size() - 1;
-                                }
-                                break;
-                            }
-                        
-                            // Get the score at the index we are scanning
-                            double score = cshash.get(keys.get(leftind));
-                            if (score < maxbgval) {
-                                nBelow++;
-                            }
-                            leftind--;
-                        }
-                        if (leftind >= keys.size() || leftind < 0) {
-                            System.out.println("NOOOO " + pwms.labels[nmat] + " maxht " + maxht + " maxind " + maxind);
-                            if (leftind < 0) {
-                                leftind = 0;
-                            } else if (leftind >= keys.size()) {
-                                leftind = keys.size() - 1;
-                            }
-                        }
-                        int left = ((Integer)keys.get(leftind)).intValue();
-        
-                        // Search right
-                        int rightind = maxind;
-                        nBelow = 0;
-                        while (nBelow < buffer) {
-                            if (rightind >= keys.size() || rightind < 0) {
-                                System.out.println("NOOOO " + pwms.labels[nmat] + " maxht " + maxht + " maxind " + maxind);
-                                if (rightind < 0) {
-                                    rightind = 0;
-                                } else if (rightind >= keys.size()) {
-                                    rightind = keys.size() - 1;
-                                }
-                                break;
-                            }
-        
-                            // Get the score at the index we are scanning
-                            double score = cshash.get(keys.get(rightind));
-                            if (score < maxbgval) {
-                                nBelow++;
-                            }
-                            rightind++;
-                        }
-                        if (rightind >= keys.size() || rightind < 0) {
-                            System.out.println("NOOOO " + pwms.labels[nmat] + " maxht " + maxht + " maxind " + maxind);
-                            if (rightind < 0) {
-                                rightind = 0;
-                            } else if (rightind >= keys.size()) {
-                                rightind = keys.size() - 1;
-                            }
-                        }
-                        int right = ((Integer)keys.get(rightind)).intValue();
-    
-                        // TODO: verify that 250 is just BG_WIN in compute_tables.R script so I can update accordingly instead of
-                        //       hardcoding this value (YUCK!)
-                        double halfwidth = (double)(right - left) / 2.0;
-                        if (halfwidth > 250) {
-                            halfwidth = 250;
-                            left = maxloc - (int)halfwidth;
-                            right = maxloc + (int)halfwidth;
-                        }
-    
-                        // Make sure we hav a 'region' that doesn't include the midpoint as one of the endpoints
-                        if (leftind != maxind && rightind != maxind) {
-                            // Math stuff to match output set up in R script compute_tables.R for testing purposes.
-                            // Can change precision in the future if this behavior isn't desired
-                            BigDecimal hw = new BigDecimal(halfwidth);
-                            hw = hw.round(new MathContext(2, RoundingMode.HALF_UP));
-    
-                            // toPlainString - avoid scientific notation in output - just less to  worry about
-                            outFileTables.println(pwms.labels[nmat] + "\t" + maxloc + "\t" + hw.toPlainString() + "\t" + left + "\t" + right);
-
-                            if (plotDir != null) {
-                                ROEPlot plotter = new ROEPlot(pwms.labels[nmat], strand, keys, values, maxloc, maxbgval, left, right, halfwidth);
-                                threadPool.execute(plotter);
-                            }
-
-                        // Print out NAs for those regions that don't have at least 1 nt up and downstream of the midpoint
-                        } else {
-                            outFileTables.println(pwms.labels[nmat] + "\tNA\tNA\tNA\tNA");
-                        }
-                    } else {
-                        //System.out.println("NIX " + pwms.labels[nmat] + " maxht " + maxht + " maxind " + maxind);
-                        outFileTables.println(pwms.labels[nmat] + "\tNA\tNA\tNA\tNA");
-                    }
+	                if (plotDir != null) {
+	                	ROETable tableFinder = new ROETable(pwms.labels[nmat], strand, keys, values);
+	                	submittedPlots.add(threadPool.submit(tableFinder));
+	                }
                 }
-    
-                outFileLocs.print("\n");
-                outFileCumScores.print("\n");
+                
             }
+            List<String> callBackList = new ArrayList<String>();
+            for (int i = 0; i < submittedPlots.size(); i++) {
+                String result = null;
+                try {
+                    result = submittedPlots.get(i).get(); // get() blocks until the result is available
+                    callBackList.add(result);
+//                    System.out.println("returned : " + result);
+                } catch (Exception e) {
+                    System.err.println(e.getMessage());
+                    e.printStackTrace();
+                    break;
+                }
+            }
+            printROETable(out_Fname + "." + strand + ".table", strand);
         }
 
-        outFileTables.close();
+//        outFileTables.close();
         outFileLocs.close();
         outFileCumScores.close();
 
@@ -425,61 +314,152 @@ public class ROEFinder {
             threadPool.shutdownNow();
         }
     }
+    
+    private static void printROETable(String outFileTable, String strand) {
+    	try {
+    		String rFile = plotDir + "/" + strand + ".mergeAllTables.R";
+            PrintWriter rFH = new PrintWriter(new FileWriter(rFile));
+            rFH.println("p <- paste(\"\\\\D*\\\\.\",\"" + strand + "\", \"\\\\.table\", sep=\"\")");
+            rFH.println("datadir <- \"" + plotDir + "\"");
+            rFH.println("flist <- list.files(datadir, pattern = p)");
+            rFH.println("all <- data.frame(MaxPeakLoc=c(), HalfWidth=c(), Left=c(), Right=c())");
+            rFH.println("for (f in flist) {");
+            rFH.println("rfile <- paste()");
+            rFH.println("outfile <- paste(datadir, \"/\", f, sep=\"\")");
+            rFH.println("tbl <- read.table(outfile, row.names = 1, header=T, sep = \"\t\")");
+            rFH.println("all <- rbind(all, tbl)");
+            rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\t\")");
+            rFH.println("}");
+            
+            rFH.close();
 
-    public static class ROEPlot implements Runnable {
+            SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
+
+            File rFileTmp = new File(rFile);
+            rFileTmp.delete();
+            
+    	} catch (Exception e) {
+    		e.printStackTrace();
+		}
+    	
+	}
+
+    public static class ROETable implements Callable<String> {
         private String pwmLabel;
         private String strand;
         private ArrayList <Integer> hitLocs;
         private ArrayList <Double> hitScores;
-        private int maxloc;
-        private double maxbgval;
-        private int ROEleft;
-        private int ROEright;
-        private double ROEhalfwidth;
 
-        public ROEPlot(String pwmLabel, String strand, ArrayList<Integer> hitLocs, ArrayList <Double> hitScores, int maxloc, double maxbgval, int ROEleft, int ROEright, double ROEhalfwidth) {
+        public ROETable(String pwmLabel, String strand, ArrayList<Integer> hitLocs, ArrayList <Double> hitScores) {
             this.pwmLabel = pwmLabel;
             this.strand = strand;
             this.hitLocs = hitLocs;
             this.hitScores = hitScores;
-            this.maxloc = maxloc;
-            this.maxbgval = maxbgval;
-            this.ROEleft = ROEleft;
-            this.ROEright = ROEright;
-            this.ROEhalfwidth = ROEhalfwidth;
         }
 
-        public void run() {
+        public String call() {
             try {
-                String rFile = pwmLabel + "." + strand + ".tempR";
-                File f = new File(plotDir + "/" + rFile);
-                PrintWriter rFH = new PrintWriter(new FileWriter(plotDir + "/" + pwmLabel + "." + strand + ".tempR"));
+            	// Generate distribution files to use in R for finding ROE Peaks
+            	// These dist files can be used in PLOT section too
+            	String rFile = plotDir + "/" + pwmLabel + "." + strand + ".computeTable.tempR";
+            	String outFileName = plotDir + "/" + pwmLabel + "." + strand + ".table";
+                //File f = new File(plotDir + "/" + rFile);
+                PrintWriter rFH = new PrintWriter(new FileWriter(rFile));
 
                 String strandDir = (strand.equals("FWD"))? "fwd" : "rev";
-                String plotFileDir = plotDir + "/" + strandDir;
+                String tableFileDir = plotDir + "/" + strandDir;
 
                 // print out calculated variables for scans and regions of enrichment (ROE) to R file
-                rFH.println("maxbgval <- " + maxbgval);
-                rFH.println("maxloc <- " + maxloc);
-                rFH.println("right <- " + ROEright + "\nleft <- " + ROEleft);
-                rFH.print("locs <- c(");
+                
+                String distFile = plotDir + "/" + pwmLabel + "." + strand + ".dist";
+//                System.out.println(distFile);
+                PrintWriter distWriter = new PrintWriter(new FileWriter(distFile));
                 for (int i = 0; i < hitLocs.size(); i++) {
-                    if (i > 0) rFH.print(",");
-                    rFH.print(hitLocs.get(i));
-                    if (i == hitLocs.size() - 1) rFH.println(")");
+                	distWriter.println(hitLocs.get(i) + "\t" + hitScores.get(i));
                 }
-                rFH.print("scores <- c(");
-                for (int i = 0; i < hitScores.size(); i++) {
-                    if (i > 0) rFH.print(",");
-                    rFH.print(hitScores.get(i));
-                    if (i == hitScores.size() - 1) rFH.println(")");
-                }
+                distWriter.close();
+                
+                /**
+                 * Mitra: This part comes from R code compute_table.R
+                 */
+                rFH.println("tbl <- read.table(\"" + distFile + "\", header=F)");
+                rFH.println("locs <- tbl[,1]");
+                rFH.println("scores <- tbl[,2]");
+                
+                rFH.println("varuse <- \"\"");
+                rFH.println("maxdist <- 4000");
+                rFH.println("outfname <- \"" + outFileName + "\"");
+                rFH.println("outTable <- matrix(nrow=1, ncol=4)");
+                rFH.println("scores_density <- density(scores)");
+                rFH.println("maxbgval <- mean(scores_density$x)");
+                
+                rFH.println("maxht <- max(scores)");
+                rFH.println("maxind <- which(scores==maxht)[1]");
+                rFH.println("maxloc <- locs[maxind][1]");
+                rFH.println("if ((maxloc < -maxdist) || (maxloc > maxdist)) {");
+                rFH.println("varuse <- \"NIX\"");
+                rFH.println("next }");
 
+                rFH.println("if (maxloc < -500 || maxloc > 500) {}");
+                
+                rFH.println("buffer <- 5");
+                
+                rFH.println("# Find Left");
+                rFH.println("leftind <- maxind");
+                rFH.println("nBelow <- 0");
+                rFH.println("while (nBelow < buffer) {");
+                rFH.println("if (leftind > length(scores) | leftind < 1) {}");
+                rFH.println("if (scores[leftind] < maxbgval) {nBelow <- nBelow + 1}");
+                rFH.println("leftind <- leftind - 1");
+                rFH.println("}");
+                rFH.println("left <- locs[leftind]");
+                
+                rFH.println("# Find Right");
+                rFH.println("rightind <- maxind");
+                rFH.println("nBelow <- 0");
+                rFH.println("while (nBelow < buffer) {");
+                rFH.println("if (scores[rightind] < maxbgval) {");
+                rFH.println("nBelow <- nBelow + 1");
+                rFH.println("}");
+                rFH.println("rightind <- rightind + 1");
+                rFH.println("}");
+                rFH.println("right <- locs[rightind]");
+                rFH.println("if ((leftind == maxind) || (rightind == maxind)) {");
+                rFH.println("varuse <- \"NIX\"");
+                rFH.println("}");
+
+                rFH.println("halfWidth <- (right - left)/2.0");
+                rFH.println("if (halfWidth > 250) {");
+                rFH.println("halfWidth <- 250");
+                rFH.println("left <- maxloc - halfWidth");
+                rFH.println("right <- maxloc + halfWidth");
+                rFH.println("}");
+                
+                rFH.println("if (varuse == \"NIX\") {");
+                rFH.println("outTable[1,1] <- NA");
+                rFH.println("outTable[1,2] <- NA");
+                rFH.println("outTable[1,3] <- NA");
+                rFH.println("outTable[1,4] <- NA");
+                rFH.println(" } else {");
+                rFH.println("outTable[1,1] <- format(maxloc, digits=2)");
+                rFH.println("outTable[1,2] <- format(halfWidth, digits=2)");
+                rFH.println("outTable[1,3] <- format(left, digits=2)");
+                rFH.println("outTable[1,4] <- format(right, digits=2)");
+                rFH.println("}");
+                
+                rFH.println("# Print table of values");
+                rFH.println("dimnames(outTable)[[2]] <- c(\"MaxPeakLoc\", \"HalfWidth\", \"Left\", \"Right\")");
+                rFH.println("dimnames(outTable)[[1]] <- \"" + pwmLabel + "\"");
+                rFH.println("write.table(outTable, file=outfname, row.names=T, col.names=T, quote=F, sep=\"\t\")");
+                
+                rFH.println("# Plot ROEs");
                 // Setup Title info
+                rFH.println("if (varuse != \"NIX\") {");
                 rFH.println("subT <- paste(\"Interval = [\", toString(format(left, digits=2)), \",\", toString(format(right, digits=2)), \"]\")");
                 rFH.println("mainT <- paste(\"" + pwmLabel + "\", subT, sep=\"\\n\")");
 
                 // Set the file name / type for the plot output
+                String plotFileDir = plotDir + "/" + strandDir;
                 rFH.println("plot_filename <- paste(\"" + plotFileDir + "/\", \"" + pwmLabel + "\", \".pk\", \".jpg\", sep=\"\")");
                 rFH.println("jpeg(file=plot_filename)");
 
@@ -492,20 +472,24 @@ public class ROEFinder {
                 rFH.println("points(maxloc, maxbgval, pch=20, col='green')");
                 rFH.println("arrows(left, maxbgval, right, maxbgval, col='green', length=0.1, code=3)");
                 rFH.println("results <- dev.off()");
+                rFH.println("}");
 
                 rFH.close();
 
                 // Could add error checking if you want, but this command is pretty safe
-                SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + plotDir + "/" + rFile);
+                SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
 
-                File rFileTmp = new File(plotDir + "/" + rFile);
+                File rFileTmp = new File(rFile);
                 rFileTmp.delete();
             }
             catch (java.io.IOException e) {
                 e.printStackTrace();
             }
+            return pwmLabel + "," + strand + " - done";
         }
+        
     }
+    
 
     public static void setupPlotDir() {
         try {
