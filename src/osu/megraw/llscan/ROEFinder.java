@@ -408,45 +408,59 @@ public class ROEFinder {
                 rFH.println("leftind <- maxind");
                 rFH.println("nBelow <- 0");
                 rFH.println("while (nBelow < buffer) {");
-                rFH.println("if (leftind > length(scores) | leftind < 1) {}");
+                rFH.println("if (leftind > length(scores) | leftind < 1) {");
+                rFH.println("varuse <- \"NIX\"");
+//                rFH.println("leftind <- -1");
+                rFH.println("break");
+                rFH.println("}");
                 rFH.println("if (scores[leftind] < maxbgval) {nBelow <- nBelow + 1}");
                 rFH.println("leftind <- leftind - 1");
                 rFH.println("}");
-                rFH.println("left <- locs[leftind]");
                 
                 rFH.println("# Find Right");
                 rFH.println("rightind <- maxind");
                 rFH.println("nBelow <- 0");
                 rFH.println("while (nBelow < buffer) {");
+                rFH.println("if (rightind > length(scores)) {");
+                rFH.println("varuse <- \"NIX\"");
+//                rFH.println("rightind <- -1");
+                rFH.println("break");
+                rFH.println("}");
+                rFH.println("");
                 rFH.println("if (scores[rightind] < maxbgval) {");
                 rFH.println("nBelow <- nBelow + 1");
                 rFH.println("}");
                 rFH.println("rightind <- rightind + 1");
                 rFH.println("}");
-                rFH.println("right <- locs[rightind]");
+                
                 rFH.println("if ((leftind == maxind) || (rightind == maxind)) {");
                 rFH.println("varuse <- \"NIX\"");
                 rFH.println("}");
-
-                rFH.println("halfWidth <- (right - left)/2.0");
-                rFH.println("if (halfWidth > 250) {");
-                rFH.println("halfWidth <- 250");
-                rFH.println("left <- maxloc - halfWidth");
-                rFH.println("right <- maxloc + halfWidth");
-                rFH.println("}");
                 
+                //------------------
                 rFH.println("if (varuse == \"NIX\") {");
                 rFH.println("outTable[1,1] <- NA");
                 rFH.println("outTable[1,2] <- NA");
                 rFH.println("outTable[1,3] <- NA");
                 rFH.println("outTable[1,4] <- NA");
                 rFH.println(" } else {");
+                rFH.println("left <- locs[leftind]");
+                rFH.println("right <- locs[rightind]");
+                rFH.println("halfWidth <- (right - left)/2.0;");
+                rFH.println("if (halfWidth > 250) {");
+                rFH.println("halfWidth <- 250");
+                rFH.println("left <- maxloc - halfWidth");
+                rFH.println("right <- maxloc + halfWidth");
+                rFH.println("}");
                 rFH.println("outTable[1,1] <- format(maxloc, digits=2)");
                 rFH.println("outTable[1,2] <- format(halfWidth, digits=2)");
                 rFH.println("outTable[1,3] <- format(left, digits=2)");
                 rFH.println("outTable[1,4] <- format(right, digits=2)");
                 rFH.println("}");
+              //------------------
+                               
                 
+                                
                 rFH.println("# Print table of values");
                 rFH.println("dimnames(outTable)[[2]] <- c(\"MaxPeakLoc\", \"HalfWidth\", \"Left\", \"Right\")");
                 rFH.println("dimnames(outTable)[[1]] <- \"" + pwmLabel + "\"");
