@@ -634,6 +634,7 @@ public class Utils {
             syscom.failed = false;
         }
         catch (IOException e) {
+        	e.printStackTrace();
             syscom.errmessage = e.toString();
             syscom.failed = true;
         }
