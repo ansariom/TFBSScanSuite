@@ -276,7 +276,8 @@ public class ROEFinder {
 	                	submittedPlots.add(threadPool.submit(tableFinder));
 	                }
                 }
-                
+                outFileLocs.print("\n");
+                outFileCumScores.print("\n");
             }
             List<String> callBackList = new ArrayList<String>();
             for (int i = 0; i < submittedPlots.size(); i++) {
