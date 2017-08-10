@@ -31,6 +31,7 @@ public class TFBSMain {
                                   "MakePWMs", 
                                   "PWMprint", 
                                   "ROEFinder", 
+                                  "ROEFinder_orig",
                                   "Scan", 
                                   "Thresholds",
                                   "GenFeaturesByNT",
@@ -79,6 +80,8 @@ public class TFBSMain {
             } else if (command.equals("ROEFinder")) {
                 ROEFinder.main(new_args);
 //                ROEFinder_jason.main(new_args);
+            } else if (command.equals("ROEFinder_orig")) {
+                ROEFinder_jason.main(new_args);
             } else if (command.equals("GenFeatures")) {
                 GenFeatures.main(new_args);
             } else if (command.equals("GenFeaturesTiledWins")) {
