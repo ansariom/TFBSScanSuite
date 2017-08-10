@@ -253,6 +253,7 @@ public class ROEFinder {
                 Hashtable <Integer, Double> cshash = null;
     
                 if (pwmResults.containsKey(pwms.labels[nmat])) cshash = pwmResults.get(pwms.labels[nmat]);
+                
                 if (cshash != null) {
                     ArrayList<Integer> keys = new ArrayList<Integer>(cshash.keySet());
                     Collections.sort(keys);
@@ -261,8 +262,6 @@ public class ROEFinder {
 	                // Print locations and cumulative scores
 	                outFileLocs.print(pwms.labels[nmat]);
 	                outFileCumScores.print(pwms.labels[nmat]);
-	                outFileLocs.print("\n");
-	                outFileCumScores.print("\n");
 	                
 	                for (int i = 0; i < keys.size(); i++) {
                         Integer loc =  keys.get(i);
