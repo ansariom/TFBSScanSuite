@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
@@ -202,6 +203,7 @@ public class ROEFinder {
                     Background BG = bgModels.get(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(threadPool.submit(run));
+                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
                 }
             }
         }
@@ -212,7 +214,7 @@ public class ROEFinder {
             ScanResult result = null;
             try {
                 result = futResults.get(i).get(); // get() blocks until the result is available
-
+                System.out.println(Calendar.getInstance().getTime() + " : completed -- " + result.pwmLabel + " nhits = " + result.hitLocs.length );
                 // Only keep scans that had results
                 if (result.hitLocs.length > 0) results.add(result);
             } catch (Exception e) {
