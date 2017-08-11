@@ -375,13 +375,13 @@ public class ROEFinder {
             rFH.println("tbl <- read.table(roe_file, row.names = 1, header=T, sep = \"\\t\")");
             rFH.println("all <- rbind(all, tbl)");
             rFH.println("}");
-            rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\t\")");
+            rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\\t\")");
             rFH.close();
 
             SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
 
             File rFileTmp = new File(rFile);
-//            rFileTmp.delete();
+            rFileTmp.delete();
     	}catch (Exception e) {
     		e.printStackTrace();
 		}
