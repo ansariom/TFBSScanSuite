@@ -224,6 +224,7 @@ public class ROEFinder {
 
         // Open file for printing observations
         PrintWriter outFileLocs = null;
+        PrintWriter outFileScores = null;
         PrintWriter outFileCumScores = null;
 //        PrintWriter outFileTables = null;
 
@@ -292,7 +293,17 @@ public class ROEFinder {
                     break;
                 }
             }
-            printROETable(out_Fname + "." + strand + ".table", strand);
+            // Put pwm labels in order in a file to produce ROEs woth respect to that order
+            String pwmLabelFile = plotDir + "/pwm_labels.txt"; 
+            PrintWriter pwmLabelWriter = new PrintWriter(new FileWriter(pwmLabelFile));
+            pwmLabelWriter.println("pwm");
+            for (String pwmLabel : pwms.labels) {
+            	pwmLabelWriter.println(pwmLabel);
+			}
+            pwmLabelWriter.close();
+           
+            //print out final ROE table
+            printROETable(out_Fname + "." + strand + ".table", strand, pwmLabelFile);
         }
 
 //        outFileTables.close();
@@ -315,7 +326,14 @@ public class ROEFinder {
         }
     }
     
-    private static void printROETable(String outFileTable, String strand) {
+    // this method concatinate all the tables that we got for each factor and write out into final ROE table
+    // this method should be replaced with another one because the order of factors(PWMs) should be the same as pwm file
+    /**
+     * @deprecated
+     * @param outFileTable
+     * @param strand
+     */
+    private static void printROETable_notSorted(String outFileTable, String strand) {
     	try {
     		String rFile = plotDir + "/" + strand + ".mergeAllTables.R";
             PrintWriter rFH = new PrintWriter(new FileWriter(rFile));
@@ -343,6 +361,31 @@ public class ROEFinder {
 		}
     	
 	}
+    
+    private static void printROETable(String outFileTable, String strand, String pwmLabelFile) {
+    	try{
+    		String rFile = plotDir + "/" + strand + ".mergeAllTables.R";
+            PrintWriter rFH = new PrintWriter(new FileWriter(rFile));
+        	rFH.println("datadir <- \"" + plotDir + "\"");
+        	rFH.println("pwms <- read.table(\"" + pwmLabelFile + "\", header = T)");
+        	rFH.println("strand <- \"" + strand + "\"");
+        	rFH.println("all <- data.frame(MaxPeakLoc=c(), HalfWidth=c(), Left=c(), Right=c())");
+        	rFH.println("for (pwmName in pwms) {");
+        	rFH.println("roe_file <- paste(datadir, \"/\", pwmName, \".\", strand, \".table\", sep = \"\")");
+            rFH.println("tbl <- read.table(roe_file, row.names = 1, header=T, sep = \"\t\")");
+            rFH.println("all <- rbind(all, tbl)");
+            rFH.println("}");
+            rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\t\")");
+            rFH.close();
+
+            SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
+
+            File rFileTmp = new File(rFile);
+//            rFileTmp.delete();
+    	}catch (Exception e) {
+    		e.printStackTrace();
+		}
+    }
 
     public static class ROETable implements Callable<String> {
         private String pwmLabel;

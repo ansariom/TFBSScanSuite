@@ -345,6 +345,7 @@ public class GenFeatures {
                     futureSeqNames.add(seqName);
                 }
                 catch (Exception ex) {
+                	ex.printStackTrace();
                     System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
                     threadPool.shutdownNow();
                     while(!threadPool.isTerminated()) {
@@ -464,6 +465,7 @@ public class GenFeatures {
                 currentSeq += 1;
             }
             catch (Exception ex) {
+            	ex.printStackTrace();
                 String seqName = futureSeqNames.get(currentSeq);
                 System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
                 threadPool.shutdownNow();
