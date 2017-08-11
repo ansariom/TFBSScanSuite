@@ -288,7 +288,7 @@ public class ROEFinder {
                 try {
                     result = submittedPlots.get(i).get(); // get() blocks until the result is available
                     callBackList.add(result);
-//                    System.out.println("returned : " + result);
+                    System.out.println("returned : " + result);
                 } catch (Exception e) {
                     System.err.println(e.getMessage());
                     e.printStackTrace();
@@ -540,7 +540,7 @@ public class ROEFinder {
                 SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
 
                 File rFileTmp = new File(rFile);
-                rFileTmp.delete();
+//                rFileTmp.delete();
             }
             catch (java.io.IOException e) {
                 e.printStackTrace();
