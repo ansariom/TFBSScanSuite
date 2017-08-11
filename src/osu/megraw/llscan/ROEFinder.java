@@ -381,7 +381,7 @@ public class ROEFinder {
             SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
 
             File rFileTmp = new File(rFile);
-            rFileTmp.delete();
+//            rFileTmp.delete();
     	}catch (Exception e) {
     		e.printStackTrace();
 		}
