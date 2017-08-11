@@ -370,9 +370,9 @@ public class ROEFinder {
         	rFH.println("pwms <- read.table(\"" + pwmLabelFile + "\", header = T)");
         	rFH.println("strand <- \"" + strand + "\"");
         	rFH.println("all <- data.frame(MaxPeakLoc=c(), HalfWidth=c(), Left=c(), Right=c())");
-        	rFH.println("for (pwmName in pwms) {");
+        	rFH.println("for (pwmName in pwms$pwm) {");
         	rFH.println("roe_file <- paste(datadir, \"/\", pwmName, \".\", strand, \".table\", sep = \"\")");
-            rFH.println("tbl <- read.table(roe_file, row.names = 1, header=T, sep = \"\t\")");
+            rFH.println("tbl <- read.table(roe_file, row.names = 1, header=T, sep = \"\\t\")");
             rFH.println("all <- rbind(all, tbl)");
             rFH.println("}");
             rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\t\")");
