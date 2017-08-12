@@ -445,10 +445,8 @@ public class ROEFinder {
                 rFH.println("maxloc <- locs[maxind][1]");
                 rFH.println("if ((maxloc < -maxdist) || (maxloc > maxdist)) {");
                 rFH.println("varuse <- \"NIX\"");
-                rFH.println("}");
+                rFH.println("} else {");
 
-                rFH.println("else {");
-                
                 rFH.println("buffer <- 5");
                 
                 rFH.println("# Find Left");
