@@ -203,7 +203,7 @@ public class ROEFinder {
                     Background BG = bgModels.get(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(threadPool.submit(run));
-                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
+//                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
                 }
             }
         }
@@ -214,7 +214,7 @@ public class ROEFinder {
             ScanResult result = null;
             try {
                 result = futResults.get(i).get(); // get() blocks until the result is available
-                System.out.println(Calendar.getInstance().getTime() + " : completed -- " + result.pwmLabel + " nhits = " + result.hitLocs.length );
+//                System.out.println(Calendar.getInstance().getTime() + " : completed -- " + result.pwmLabel + " nhits = " + result.hitLocs.length );
                 // Only keep scans that had results
                 if (result.hitLocs.length > 0) results.add(result);
             } catch (Exception e) {
@@ -277,10 +277,11 @@ public class ROEFinder {
 	                if (plotDir != null) {
 	                	ROETable tableFinder = new ROETable(pwms.labels[nmat], strand, keys, values);
 	                	submittedPlots.add(threadPool.submit(tableFinder));
+	                	System.out.println("plot submitted: " + pwms.labels[nmat]);
 	                }
+	                outFileLocs.print("\n");
+	                outFileCumScores.print("\n");
                 }
-                outFileLocs.print("\n");
-                outFileCumScores.print("\n");
             }
             List<String> callBackList = new ArrayList<String>();
             for (int i = 0; i < submittedPlots.size(); i++) {
@@ -444,9 +445,9 @@ public class ROEFinder {
                 rFH.println("maxloc <- locs[maxind][1]");
                 rFH.println("if ((maxloc < -maxdist) || (maxloc > maxdist)) {");
                 rFH.println("varuse <- \"NIX\"");
-                rFH.println("next }");
+                rFH.println("}");
 
-                rFH.println("if (maxloc < -500 || maxloc > 500) {}");
+                rFH.println("else {");
                 
                 rFH.println("buffer <- 5");
                 
@@ -481,6 +482,7 @@ public class ROEFinder {
                 
                 rFH.println("if ((leftind == maxind) || (rightind == maxind)) {");
                 rFH.println("varuse <- \"NIX\"");
+                rFH.println("}");
                 rFH.println("}");
                 
                 //------------------
@@ -537,7 +539,7 @@ public class ROEFinder {
                 rFH.close();
 
                 // Could add error checking if you want, but this command is pretty safe
-                SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
+                SysCom cmd = Utils.runSystemCommand("R --slave -f " + rFile);
 
                 File rFileTmp = new File(rFile);
 //                rFileTmp.delete();
