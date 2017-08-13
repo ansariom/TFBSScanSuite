@@ -487,12 +487,13 @@ public class ROEFinder {
                 			"\t peak_mode_loc <- locs[peak_mod_index] \n" + 
             				"}\n");
                 
-                rFH.println("maxbgval <- mean(density(smooth_scores)$x)\n");
+//                rFH.println("maxbgval <- mean(density(smooth_scores)$x)\n");
                 
                 rFH.println("#### Use old method to find region but using smoothed values");
                 rFH.println("if ((peak_mode_loc < -maxdist) || (peak_mode_loc > maxdist) || varuse == \"NIX\") { \n " +
                 			"\t varuse <- \"NIX\" \n" + 
             				"} else { \n" + 
+                			"\t maxbgval <- mean(density(smooth_scores[1:peak_mode_loc])$x) \n" +
             				"\t buffer <- 2 \n" + 
             				"\t # Find Left \n " + 
             				"\t leftind <- peak_mod_index \n" +
@@ -510,6 +511,7 @@ public class ROEFinder {
                 
                 rFH.println("\t # Find Right");
                 rFH.println("\t rightind <- peak_mod_index");
+                rFH.println("\t maxbgval <- mean(density(smooth_scores[peak_mod_loc:length(smooth_scores)])$x)");
                 rFH.println("\t nBelow <- 0");
                 rFH.println("\t while (nBelow < buffer) {");
                 rFH.println("\t\t if (rightind > length(scores)) {");
