@@ -39,7 +39,7 @@ import org.apache.commons.cli.ParseException;
  * @author Molly Megraw
  * @version 1.0
  */
-public class ROEFinder {
+public class ROEFinder_mitra_Aug17 {
 
     public static char[][] S;
     public static DoubleColReturn Scores;
@@ -64,11 +64,11 @@ public class ROEFinder {
     public static String promoterSeqs_Fname;
     public static String out_Fname;
 
-    public ROEFinder() {
+    public ROEFinder_mitra_Aug17() {
     }
 
     public static void main(String[] args) throws java.io.IOException, BadCharException {
-        ROEFinder ss = new ROEFinder();
+        ROEFinder_mitra_Aug17 ss = new ROEFinder_mitra_Aug17();
 
         // Slurp in all the command line arguments
         parseArgs(args);
@@ -382,7 +382,7 @@ public class ROEFinder {
             rFH.println("write.table(all, file=\"" + outFileTable + "\" , row.names=T, col.names=T, quote=F, sep=\"\\t\")");
             rFH.close();
 
-            SysCom cmd = Utils.runSystemCommand("R --slave -f " + rFile);
+            SysCom cmd = Utils.runSystemCommand("R --quiet --slave -f " + rFile);
 
             File rFileTmp = new File(rFile);
 //            rFileTmp.delete();
@@ -408,7 +408,7 @@ public class ROEFinder {
             try {
             	// Generate distribution files to use in R for finding ROE Peaks
             	// These dist files can be used in PLOT section too
-            	String rFile = plotDir + "/" + pwmLabel + "." + strand + ".computeTable.tmp.R";
+            	String rFile = plotDir + "/" + pwmLabel + "." + strand + ".computeTable.tempR";
             	String outFileName = plotDir + "/" + pwmLabel + "." + strand + ".table";
                 //File f = new File(plotDir + "/" + rFile);
                 PrintWriter rFH = new PrintWriter(new FileWriter(rFile));
@@ -429,128 +429,84 @@ public class ROEFinder {
                 /**
                  * Mitra: This part comes from R code compute_table.R
                  */
-                rFH.println("argmax <- function(x, y, w=1, ...) {\n" +
-                		"\t require(zoo)\n" +
-                		"\t n <- length(y)\n" +
-                		"\t y.smooth <- loess(y ~ x, ...)$fitted\n" +
-                		"\t y.max <- rollapply(zoo(y.smooth), 2*w+1, max, align=\"center\")\n" +
-                		"\t delta <- y.max - y.smooth[-c(1:w, n+1-1:w)]\n" + 
-                		"\t i.max <- which(delta <= 0) + w\n" + 
-                		"\t list(x=x[i.max], i=i.max, y.hat=y.smooth)\n" +
-                		" }");
+                rFH.println("tbl <- read.table(\"" + distFile + "\", header=F)");
+                rFH.println("locs <- tbl[,1]");
+                rFH.println("scores <- tbl[,2]");
                 
-                rFH.println("dist_tbl <- read.table(\""+ distFile + "\", header=F)");
-                rFH.println("locs <- dist_tbl[,1] \n" + 
-                		    "scores <- dist_tbl[,2] \n" + 
-                		    "varuse <- \"\" \n" + 
-                		    "maxdist <- length(locs) / 2 \n");
-                
+                rFH.println("varuse <- \"\"");
+                rFH.println("maxdist <- 4000");
                 rFH.println("outfname <- \"" + outFileName + "\"");
                 rFH.println("outTable <- matrix(nrow=1, ncol=4)");
+                rFH.println("scores_density <- density(scores)");
+                rFH.println("maxbgval <- mean(scores_density$x)");
+                
+                rFH.println("maxht <- max(scores)");
+                rFH.println("maxind <- which(scores==maxht)[1]");
+                rFH.println("maxloc <- locs[maxind][1]");
+                rFH.println("if ((maxloc < -maxdist) || (maxloc > maxdist)) {");
+                rFH.println("varuse <- \"NIX\"");
+                rFH.println("} else {");
 
-                String plotFileDir = plotDir + "/" + strandDir;
-                rFH.println("## Use the smoothing method to find peaks \n" + 
-                			"w <- 1000 \n" + 
-                			"span <- 0.05 \n" + 
-                			"peaks <- argmax(locs, scores, w=w, span=span)");
-                rFH.println("smooth_plotfile <- paste(\"" + plotFileDir + "/\", \"" + pwmLabel + "\", \".smoothed\", \".jpg\", sep=\"\")");
-                rFH.println("jpeg(file=smooth_plotfile) \n" + 
-                			"plot(locs, scores, cex=0.75, col=\"Gray\", main=paste(\"w = \", w, \", span = \", span, sep=\"\")) \n " + 
-                			"lines(locs, peaks$y.hat,  lwd=2) \n" + 
-                			"scores.min <- min(scores) \n" + 
-                			"sapply(peaks$i, function(i) lines(c(locs[i],locs[i]), c(scores.min, peaks$y.hat[i]),col=\"Red\", lty=2)) \n" + 
-                			"points(locs[peaks$i], peaks$y.hat[peaks$i], col=\"Red\", pch=19, cex=1.25) \n" + 
-                			"dev.off()\n");
-                rFH.println("## process found peaks");
-                rFH.println("smooth_scores <- peaks$y.hat");
+                rFH.println("buffer <- 5");
                 
-                rFH.println("if (length(peaks$i) == 0) { \n" + 
-                			"\t print(\"no peaks were found!\") \n" +
-                			"\t varuse = \"NIX\" \n" + 
-            				"} else if (length(peaks$i) > 1){ ");
-                rFH.println("\t print(\"more than one peak detected! Get the closest one to max value\") \n " +
-                			"\t max_idx <- which(peaks$y.hat == max(smooth_scores)) \n" + 
-                			"\t mode_idxes <- peaks$i \n" + 
-                			"\t distance_to_max <- 10000 \n" + 
-                			"\t closest <- \"\"");
-                rFH.println("\t for (idx in mode_idxes) { \n" + 
-                			"\t\t distance = abs(idx - max_idx) \n" + 
-                			"\t\t if (distance < distance_to_max) { \n" + 
-                				"\t\t\t distance_to_max <- distance \n" + 
-                				"\t\t\t closest <- idx \n" + 
-            				"\t\t } \n" + 
-            				"\t} \n" +
-            				"\t peak_mod_index <- closest \n" + 
-            				"} else { ");
-                rFH.println("\t peak_mod_index <- peaks$i[1] \n" + 
-                			"\t peak_mode_score <- peaks$y.hat[peaks$i] \n" + 
-                			"\t peak_mode_loc <- locs[peaks$i] \n" + 
-            				"}\n");
+                rFH.println("# Find Left");
+                rFH.println("leftind <- maxind");
+                rFH.println("nBelow <- 0");
+                rFH.println("while (nBelow < buffer) {");
+                rFH.println("if (leftind > length(scores) | leftind < 1) {");
+                rFH.println("varuse <- \"NIX\"");
+//                rFH.println("leftind <- -1");
+                rFH.println("break");
+                rFH.println("}");
+                rFH.println("if (scores[leftind] < maxbgval) {nBelow <- nBelow + 1}");
+                rFH.println("leftind <- leftind - 1");
+                rFH.println("}");
                 
-                rFH.println("maxbgval <- mean(density(smooth_scores)$x)\n");
-                
-                rFH.println("#### Use old method to find region but using smoothed values");
-                rFH.println("if ((peak_mode_loc < -maxdist) || (peak_mode_loc > maxdist) || varuse == \"NIX\") { \n " +
-                			"\t varuse <- \"NIX\" \n" + 
-            				"} else { \n" + 
-            				"\t buffer <- 2 \n" + 
-            				"\t # Find Left \n " + 
-            				"\t leftind <- peak_mod_index \n" +
-            				"\t nBelow <- 0 \n " +
-            				"\t while (nBelow < buffer) { \n" + 
-            				"\t\t if (leftind > length(scores) | leftind < 1) { \n" + 
-            				"\t\t\t varuse <- \"NIX\" \n" + 
-            				"\t\t\t break \n " + 
-            				"\t\t } \n" + 
-            				"\t\t if (smooth_scores[leftind] < maxbgval) { \n" + 
-            				"\t\t\t nBelow <- nBelow + 1 \n" + 
-            				"\t\t } \n" + 
-            				"\t\t leftind <- leftind - 1 \n" + 
-            				"\t } " ); 
-                
-                rFH.println("\t # Find Right");
-                rFH.println("\t rightind <- peak_mod_index");
-                rFH.println("\t nBelow <- 0");
-                rFH.println("\t while (nBelow < buffer) {");
-                rFH.println("\t\t if (rightind > length(scores)) {");
-                rFH.println("\t\t\t varuse <- \"NIX\"");
-                rFH.println("\t\t break");
-                rFH.println("\t }");
-
-                rFH.println("\t\t if (smooth_scores[rightind] < maxbgval) { \n" + 
-                			"\t\t\t nBelow <- nBelow + 1 \n" + 
-            				"\t\t} \n" + 
-            				"\t\t rightind <- rightind + 1 \n" + 
-            				"\t} \n" +
-            				"\t if ((leftind == peak_mod_index) || (rightind == peak_mod_index)) { \n" + 
-            				"\t\t varuse <- \"NIX\" \n" + 
-            				"\t } \n" +
-            				"} \n");
-
+                rFH.println("# Find Right");
+                rFH.println("rightind <- maxind");
+                rFH.println("nBelow <- 0");
+                rFH.println("while (nBelow < buffer) {");
+                rFH.println("if (rightind > length(scores)) {");
+                rFH.println("varuse <- \"NIX\"");
+//                rFH.println("rightind <- -1");
+                rFH.println("break");
+                rFH.println("}");
                 rFH.println("");
+                rFH.println("if (scores[rightind] < maxbgval) {");
+                rFH.println("nBelow <- nBelow + 1");
+                rFH.println("}");
+                rFH.println("rightind <- rightind + 1");
+                rFH.println("}");
+                
+                rFH.println("if ((leftind == maxind) || (rightind == maxind)) {");
+                rFH.println("varuse <- \"NIX\"");
+                rFH.println("}");
+                rFH.println("}");
                 
                 //------------------
                 rFH.println("if (varuse == \"NIX\") {");
-                rFH.println("\t outTable[1,1] <- NA");
-                rFH.println("\t outTable[1,2] <- NA");
-                rFH.println("\t outTable[1,3] <- NA");
-                rFH.println("\t outTable[1,4] <- NA");
+                rFH.println("outTable[1,1] <- NA");
+                rFH.println("outTable[1,2] <- NA");
+                rFH.println("outTable[1,3] <- NA");
+                rFH.println("outTable[1,4] <- NA");
                 rFH.println(" } else {");
-                rFH.println("\t left <- locs[leftind]");
-                rFH.println("\t right <- locs[rightind]");
-                rFH.println("\t halfWidth <- (right - left)/2.0;");
-                rFH.println("\t if (halfWidth > 250) {");
-                rFH.println("\t\t halfWidth <- 250 \n" +
-                			"\t\t left <- peak_mode_loc - halfWidth \n " + 
-                			"\t\t right <- peak_mode_loc + halfWidth \n" + 
-                			"\t } \n" +
-                			"\t outTable[1,1] <- format(peak_mode_loc, digits=2) \n" + 
-                			"\t outTable[1,2] <- format(halfWidth, digits=2) \n" + 
-                			"\t outTable[1,3] <- format(left, digits=2) \n" + 
-                			"\t outTable[1,4] <- format(right, digits=2) \n" +
-                			"} \n");
-                rFH.println("");
+                rFH.println("left <- locs[leftind]");
+                rFH.println("right <- locs[rightind]");
+                rFH.println("halfWidth <- (right - left)/2.0;");
+                rFH.println("if (halfWidth > 250) {");
+                rFH.println("halfWidth <- 250");
+                rFH.println("left <- maxloc - halfWidth");
+                rFH.println("right <- maxloc + halfWidth");
+                rFH.println("}");
+                rFH.println("outTable[1,1] <- format(maxloc, digits=2)");
+                rFH.println("outTable[1,2] <- format(halfWidth, digits=2)");
+                rFH.println("outTable[1,3] <- format(left, digits=2)");
+                rFH.println("outTable[1,4] <- format(right, digits=2)");
+                rFH.println("}");
+              //------------------
+                               
                 
+                                
                 rFH.println("# Print table of values");
                 rFH.println("dimnames(outTable)[[2]] <- c(\"MaxPeakLoc\", \"HalfWidth\", \"Left\", \"Right\")");
                 rFH.println("dimnames(outTable)[[1]] <- \"" + pwmLabel + "\"");
@@ -563,7 +519,7 @@ public class ROEFinder {
                 rFH.println("mainT <- paste(\"" + pwmLabel + "\", subT, sep=\"\\n\")");
 
                 // Set the file name / type for the plot output
-                
+                String plotFileDir = plotDir + "/" + strandDir;
                 rFH.println("plot_filename <- paste(\"" + plotFileDir + "/\", \"" + pwmLabel + "\", \".pk\", \".jpg\", sep=\"\")");
                 rFH.println("jpeg(file=plot_filename)");
 
@@ -573,7 +529,7 @@ public class ROEFinder {
                 rFH.println("points(locs[locs >= left & locs <= right], scores[locs >= left & locs <= right], col='red', pch=1)");
                 rFH.println("plot(locs[(locs >= left - 20) & (locs <= right + 20)], scores[(locs >= left - 20) & (locs <= right + 20)], main=mainT, xlab=\"locs\", ylab=\"scores\")");
                 rFH.println("points(locs[locs >= left & locs <= right], scores[locs >= left & locs <= right], col='red', pch=1)");
-                rFH.println("points(peak_mode_loc, maxbgval, pch=20, col='green')");
+                rFH.println("points(maxloc, maxbgval, pch=20, col='green')");
                 rFH.println("arrows(left, maxbgval, right, maxbgval, col='green', length=0.1, code=3)");
                 rFH.println("results <- dev.off()");
                 rFH.println("}");
