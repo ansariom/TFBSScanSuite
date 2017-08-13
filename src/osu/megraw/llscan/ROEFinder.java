@@ -481,10 +481,10 @@ public class ROEFinder {
             				"\t\t } \n" + 
             				"\t} \n" +
             				"\t peak_mod_index <- closest \n" + 
+            				"\t peak_mode_loc <- locs[peak_mod_index] \n" +
             				"} else { ");
                 rFH.println("\t peak_mod_index <- peaks$i[1] \n" + 
-                			"\t peak_mode_score <- peaks$y.hat[peaks$i] \n" + 
-                			"\t peak_mode_loc <- locs[peaks$i] \n" + 
+                			"\t peak_mode_loc <- locs[peak_mod_index] \n" + 
             				"}\n");
                 
                 rFH.println("maxbgval <- mean(density(smooth_scores)$x)\n");
