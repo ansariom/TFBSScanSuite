@@ -161,24 +161,27 @@ public class CompueCumScores {
 
         System.out.println("Generating local background sequence distributions");
 
+        /**
+         * This is useless and memory intensive, let scan runner compute them
+         */
         // Generate local sequence background distributions for all our promoter sequences
-        Hashtable <String, Background> bgModels = new Hashtable <String, Background>();
-        if (BG_WIN > 0) {
-            for (int i = 0; i < seqLabels.length; i++) {
-                int current = i + 1;
+//        Hashtable <String, Background> bgModels = new Hashtable <String, Background>();
+//        if (BG_WIN > 0) {
+//            for (int i = 0; i < seqLabels.length; i++) {
+//                int current = i + 1;
 //                System.err.print("\rGetting BG for " + seqLabels[i] + ": " + current + " / " + seqLabels.length); 
-                double[][] B = Utils.getWholeSeqLocalBackground(S[i], BG_WIN);
-                double[][][] B_M1 = Utils.getWholeSeqLocalM1Background(S[i], BG_WIN);
-                bgModels.put(seqLabels[i], new Background(seqLabels[i], B, B_M1));
-                if (i < seqLabels.length - 1) {
-//                    System.err.print("\r                                                               ");
-                } else {
+//                double[][] B = Utils.getWholeSeqLocalBackground(S[i], BG_WIN);
+//                double[][][] B_M1 = Utils.getWholeSeqLocalM1Background(S[i], BG_WIN);
+//                bgModels.put(seqLabels[i], new Background(seqLabels[i], B, B_M1));
+//                if (i < seqLabels.length - 1) {
+//                    System.err.print("\r                                                        /       ");
+//                } else {
 //                    System.err.println();
-                }
-            }
-        } else {
-            bgModels.put("", new Background()); // Store equal background model under an empty string
-        }
+//                }
+//            }
+//        } else {
+//            bgModels.put("", new Background()); // Store equal background model under an empty string
+//        }
 
         // Read PWM file and process each entry
         PWMReturn pwms = Load.loadPWMFileSimpleHeader(pwms_Fname, pseudoCountsVal);
@@ -204,8 +207,9 @@ public class CompueCumScores {
                 	/**
                 	 * Mitra Memory issue
                 	 */
-                    Background BG = bgModels.remove(seqLabels[nseq]);
-                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
+//                    Background BG = bgModels.remove(seqLabels[nseq]);
+                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq], BG_WIN);
+//                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(threadPool.submit(run));
 //                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
                 }

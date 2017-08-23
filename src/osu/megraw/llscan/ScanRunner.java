@@ -45,6 +45,24 @@ public class ScanRunner implements Callable<ScanResult> {
         this.seqLabel = seqLabel;
     }
     
+    public ScanRunner (char[] S, double[][] in_ThetaT, String strand, double minScore, int beyondTSS,
+            String pwmLabel, String seqLabel, int BG_WIN) {
+		this.S = S;
+		this.in_ThetaT = in_ThetaT;
+		this.strand = strand;
+		double[][] B = Utils.getWholeSeqLocalBackground(S, BG_WIN);
+        double[][][] B_M1 = Utils.getWholeSeqLocalM1Background(S, BG_WIN);
+        if (BG_WIN > 0) {
+        	this.BG = new Background(seqLabel, B, B_M1);
+        } else {
+        	this.BG = new Background();
+        }
+		this.minScore = minScore;
+		this.beyondTSS = beyondTSS;
+		this.pwmLabel = pwmLabel;
+		this.seqLabel = seqLabel;
+    }
+    
 
     public ScanResult call() {
     	System.out.println("ScanRunner is called for : " + pwmLabel + ", " + seqLabel);
