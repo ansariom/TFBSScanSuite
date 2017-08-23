@@ -236,6 +236,10 @@ public class CompueCumScores {
             strand = (totalStrands == 2)? strands[strandNum] : strand;
             for (int nmat = 0; nmat < pwms.pwms.length; nmat++) {
                 for (int nseq = 0; nseq < S.length; nseq++) {
+                	/**
+                	 * Mitra Memory issue
+                	 */
+                    Background BG = bgModels.get(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(pool.submit(run));
                 }
