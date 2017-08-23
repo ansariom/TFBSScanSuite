@@ -179,12 +179,18 @@ public class CompueCumScores {
               BGRunner bgRunner = new BGRunner(S[i], BG_WIN, seqLabels[i]);
               Future<Background> futureBG = pool.submit(bgRunner);
               set.add(futureBG);
+              if (i < seqLabels.length - 1) {
+                System.err.print("\r                                                        ");
+              } else {
+            	  System.err.println();
+              }
         	}
         	
-        	System.out.println("Collect BG results ..");
+        	System.err.println("Collecting BG results ..");
         	for (Future<Background> futureBG: set) {
         		Background background = futureBG.get();
         		bgModels.put(background.seqLabel, background);
+        		System.err.println("\rBG for : " + background.seqLabel + " competed!");
         	}
         } else {
           bgModels.put("", new Background()); // Store equal background model under an empty string
@@ -233,9 +239,9 @@ public class CompueCumScores {
                 	/**
                 	 * Mitra Memory issue
                 	 */
-//                    Background BG = bgModels.remove(seqLabels[nseq]);
-                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq], BG_WIN);
-//                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
+                    Background BG = bgModels.remove(seqLabels[nseq]);
+//                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq], BG_WIN);
+                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(pool.submit(run));
 //                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
                 }
