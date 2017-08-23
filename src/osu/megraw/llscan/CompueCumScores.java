@@ -166,14 +166,14 @@ public class CompueCumScores {
         if (BG_WIN > 0) {
             for (int i = 0; i < seqLabels.length; i++) {
                 int current = i + 1;
-                System.err.print("\rGetting BG for " + seqLabels[i] + ": " + current + " / " + seqLabels.length); 
+//                System.err.print("\rGetting BG for " + seqLabels[i] + ": " + current + " / " + seqLabels.length); 
                 double[][] B = Utils.getWholeSeqLocalBackground(S[i], BG_WIN);
                 double[][][] B_M1 = Utils.getWholeSeqLocalM1Background(S[i], BG_WIN);
                 bgModels.put(seqLabels[i], new Background(seqLabels[i], B, B_M1));
                 if (i < seqLabels.length - 1) {
-                    System.err.print("\r                                                               ");
+//                    System.err.print("\r                                                               ");
                 } else {
-                    System.err.println();
+//                    System.err.println();
                 }
             }
         } else {
