@@ -24,7 +24,7 @@ import java.util.HashSet;
 public class TFBSMain {
     public static HashSet <String> commands;
 
-    public static void main(String[] args) throws java.io.IOException, java.lang.InterruptedException, osu.megraw.llscan.BadCharException {
+    public static void main(String[] args) throws java.io.IOException, java.lang.InterruptedException, osu.megraw.llscan.BadCharException, Exception {
         String[] command_list = { "Background", 
                                   "GenFeatures", 
                                   "CumScore", 

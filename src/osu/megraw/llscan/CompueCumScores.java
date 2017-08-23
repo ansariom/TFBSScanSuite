@@ -10,9 +10,15 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -67,11 +73,13 @@ public class CompueCumScores {
     public CompueCumScores() {
     }
 
-    public static void main(String[] args) throws java.io.IOException, BadCharException {
+    public static void main(String[] args) throws java.io.IOException, BadCharException, InterruptedException, ExecutionException {
         CompueCumScores ss = new CompueCumScores();
 
         // Slurp in all the command line arguments
         parseArgs(args);
+
+        ExecutorService pool = Executors.newFixedThreadPool(threadPoolSize);
 
         // Setup output directories for plotting if user specified to make plots
 //        if (plotDir != null) setupPlotDir();
@@ -154,18 +162,36 @@ public class CompueCumScores {
             System.exit(0);
         }
 
+        // Generate local sequence background distributions for all our promoter sequences
         // NOTE: Orignal ROE Finder code *DID NOT HANDLE BACKGROUND MODELS OF 0th ORDER*
         //       If you want to do that - you will need to changes this section by setting B_M1
         //       to null - this should instantiate the Background object to assume a 0th order
         //       when ScanRunner uses it.
 
-        System.out.println("Generating local background sequence distributions");
-
-        /**
-         * This is useless and memory intensive, let scan runner compute them
-         */
-        // Generate local sequence background distributions for all our promoter sequences
-//        Hashtable <String, Background> bgModels = new Hashtable <String, Background>();
+        System.out.println("Generating local background sequence distributions in parallel");
+        Set<Future<Background>> set = new HashSet<Future<Background>>();
+        
+        Hashtable <String, Background> bgModels = new Hashtable <String, Background>();
+        if (BG_WIN > 0) {
+        	for (int i = 0; i < seqLabels.length; i++) {
+        		int current = i + 1;
+              System.err.print("\rGetting BG for " + seqLabels[i] + ": " + current + " / " + seqLabels.length); 
+              BGRunner bgRunner = new BGRunner(S[i], BG_WIN, seqLabels[i]);
+              Future<Background> futureBG = pool.submit(bgRunner);
+              set.add(futureBG);
+        	}
+        	
+        	System.out.println("Collect BG results ..");
+        	for (Future<Background> futureBG: set) {
+        		Background background = futureBG.get();
+        		bgModels.put(background.seqLabel, background);
+        	}
+        } else {
+          bgModels.put("", new Background()); // Store equal background model under an empty string
+        }
+        
+        System.out.println("BG models are completed!");
+        
 //        if (BG_WIN > 0) {
 //            for (int i = 0; i < seqLabels.length; i++) {
 //                int current = i + 1;
@@ -196,7 +222,7 @@ public class CompueCumScores {
 
         System.out.println("Setting up threads ... ");
         // Setup / run all the scans!
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
+//        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
         List<Future<ScanResult>> futResults = new ArrayList<Future<ScanResult>>();
 
         int totalStrands = (strand.equals("BOTH"))? 2 : 1;
@@ -210,7 +236,7 @@ public class CompueCumScores {
 //                    Background BG = bgModels.remove(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq], BG_WIN);
 //                    ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
-                    futResults.add(threadPool.submit(run));
+                    futResults.add(pool.submit(run));
 //                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
                 }
             }
@@ -323,17 +349,17 @@ public class CompueCumScores {
 
         System.out.println("Processed all PWMs, shutting down now...");
 
-        threadPool.shutdown();
+        pool.shutdown();
 
         try {
-            while(!threadPool.isTerminated()) {
-                threadPool.awaitTermination(2, TimeUnit.SECONDS);
-                threadPool.shutdownNow();
+            while(!pool.isTerminated()) {
+                pool.awaitTermination(2, TimeUnit.SECONDS);
+                pool.shutdownNow();
             }
         }
         catch (InterruptedException ex) {
             System.out.println("Got interrupted: "+ex);
-            threadPool.shutdownNow();
+            pool.shutdownNow();
         }
     }
     
