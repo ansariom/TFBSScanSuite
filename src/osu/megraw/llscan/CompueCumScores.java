@@ -39,7 +39,7 @@ import org.apache.commons.cli.ParseException;
  * @author Molly Megraw
  * @version 1.0
  */
-public class ROEFinder {
+public class CompueCumScores {
 
     public static char[][] S;
     public static DoubleColReturn Scores;
@@ -64,11 +64,11 @@ public class ROEFinder {
     public static String promoterSeqs_Fname;
     public static String out_Fname;
 
-    public ROEFinder() {
+    public CompueCumScores() {
     }
 
     public static void main(String[] args) throws java.io.IOException, BadCharException {
-        ROEFinder ss = new ROEFinder();
+        CompueCumScores ss = new CompueCumScores();
 
         // Slurp in all the command line arguments
         parseArgs(args);
@@ -200,7 +200,10 @@ public class ROEFinder {
             strand = (totalStrands == 2)? strands[strandNum] : strand;
             for (int nmat = 0; nmat < pwms.pwms.length; nmat++) {
                 for (int nseq = 0; nseq < S.length; nseq++) {
-                    Background BG = bgModels.get(seqLabels[nseq]);
+                	/**
+                	 * Mitra Memory issue
+                	 */
+                    Background BG = bgModels.remove(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
                     futResults.add(threadPool.submit(run));
 //                    System.out.println(Calendar.getInstance().getTime() + " : submitted -- " + pwms.labels[nmat] );
@@ -274,39 +277,39 @@ public class ROEFinder {
                         outFileCumScores.print("\t" + Print.df2.format(cumscore.doubleValue()));
     
                     }
-	                if (plotDir != null) {
-	                	ROETable tableFinder = new ROETable(pwms.labels[nmat], strand, keys, values);
-	                	submittedPlots.add(threadPool.submit(tableFinder));
-	                	System.out.println("plot submitted: " + pwms.labels[nmat]);
-	                }
+//	                if (plotDir != null) {
+//	                	ROETable tableFinder = new ROETable(pwms.labels[nmat], strand, keys, values);
+//	                	submittedPlots.add(threadPool.submit(tableFinder));
+//	                	System.out.println("plot submitted: " + pwms.labels[nmat]);
+//	                }
 	                outFileLocs.print("\n");
 	                outFileCumScores.print("\n");
                 }
             }
-            List<String> callBackList = new ArrayList<String>();
-            for (int i = 0; i < submittedPlots.size(); i++) {
-                String result = null;
-                try {
-                    result = submittedPlots.get(i).get(); // get() blocks until the result is available
-                    callBackList.add(result);
-                    System.out.println("returned : " + result);
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                    e.printStackTrace();
-                    break;
-                }
-            }
+//            List<String> callBackList = new ArrayList<String>();
+//            for (int i = 0; i < submittedPlots.size(); i++) {
+//                String result = null;
+//                try {
+//                    result = submittedPlots.get(i).get(); // get() blocks until the result is available
+//                    callBackList.add(result);
+//                    System.out.println("returned : " + result);
+//                } catch (Exception e) {
+//                    System.err.println(e.getMessage());
+//                    e.printStackTrace();
+//                    break;
+//                }
+//            }
             // Put pwm labels in order in a file to produce ROEs woth respect to that order
-            String pwmLabelFile = plotDir + "/pwm_labels.txt"; 
-            PrintWriter pwmLabelWriter = new PrintWriter(new FileWriter(pwmLabelFile));
-            pwmLabelWriter.println("pwm");
-            for (String pwmLabel : pwms.labels) {
-            	pwmLabelWriter.println(pwmLabel);
-			}
-            pwmLabelWriter.close();
-           
-            //print out final ROE table
-            printROETable(out_Fname + "." + strand + ".table", strand, pwmLabelFile);
+//            String pwmLabelFile = plotDir + "/pwm_labels.txt"; 
+//            PrintWriter pwmLabelWriter = new PrintWriter(new FileWriter(pwmLabelFile));
+//            pwmLabelWriter.println("pwm");
+//            for (String pwmLabel : pwms.labels) {
+//            	pwmLabelWriter.println(pwmLabel);
+//			}
+//            pwmLabelWriter.close();
+//           
+//            //print out final ROE table
+//            printROETable(out_Fname + "." + strand + ".table", strand, pwmLabelFile);
         }
 
 //        outFileTables.close();

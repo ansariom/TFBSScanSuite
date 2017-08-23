@@ -44,6 +44,7 @@ public class TFBSMain {
                        "This is the main interface to the TFBS-scanning utilties package.\n" +
                        "This package inlcudes the following commands:\n\n" +
                        "Scan:        The main scanning utility which scans TFBS sites.\n\n" +
+                       "CumScore:   Generates loglike cumulitive scores for ROE finder.\n\n" +
                        "ROEFinder:   Generates regions of enrichment for a list of TFBSs.\n\n" +
                        "GenFeatures: Generates TFBS features within regions of enrichment and\n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
@@ -77,8 +78,8 @@ public class TFBSMain {
             // Primary scanning programs
             if (command.equals("Scan")) {
                 Scan.main(new_args);
-            } else if (command.equals("ROEFinder")) {
-                ROEFinder.main(new_args);
+            } else if (command.equals("CumScore")) {
+                CompueCumScores.main(new_args);
             } else if (command.equals("ROEFinder_orig")) {
                 ROEFinder_jason.main(new_args);
             } else if (command.equals("GenFeatures")) {
