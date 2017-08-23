@@ -27,6 +27,7 @@ public class TFBSMain {
     public static void main(String[] args) throws java.io.IOException, java.lang.InterruptedException, osu.megraw.llscan.BadCharException {
         String[] command_list = { "Background", 
                                   "GenFeatures", 
+                                  "CumScore", 
                                   "GenFeaturesTiledWins",
                                   "MakePWMs", 
                                   "PWMprint", 
