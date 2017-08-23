@@ -74,7 +74,7 @@ public class CompueCumScores {
         parseArgs(args);
 
         // Setup output directories for plotting if user specified to make plots
-        if (plotDir != null) setupPlotDir();
+//        if (plotDir != null) setupPlotDir();
 
         // Read promoter sequences file
         FastaReturn Seqs;
@@ -191,6 +191,7 @@ public class CompueCumScores {
             Scores = new DoubleColReturn(pwms.labels);
         }
 
+        System.out.println("Setting up threads ... ");
         // Setup / run all the scans!
         ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
         List<Future<ScanResult>> futResults = new ArrayList<Future<ScanResult>>();

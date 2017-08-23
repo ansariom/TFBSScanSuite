@@ -44,8 +44,10 @@ public class ScanRunner implements Callable<ScanResult> {
         this.pwmLabel = pwmLabel;
         this.seqLabel = seqLabel;
     }
+    
 
     public ScanResult call() {
+    	System.out.println("ScanRunner is called for : " + pwmLabel + ", " + seqLabel);
         return this.scan();
     }
 
