@@ -219,6 +219,7 @@ public class CompueCumScores {
             }
         }
 
+        System.out.println("all pwms finished .. wait for writing into file");
 //        // Get all the scan results!
 //        List<ScanResult> results = new ArrayList<ScanResult>();
 //        for (int i = 0; i < futResults.size(); i++) {

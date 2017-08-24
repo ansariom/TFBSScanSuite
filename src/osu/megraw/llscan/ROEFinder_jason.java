@@ -205,21 +205,26 @@ public class ROEFinder_jason {
             }
         }
 
+        System.out.println(futResults.size() + " jobs submitted !!!!!!");
         // Get all the scan results!
         List<ScanResult> results = new ArrayList<ScanResult>();
         for (int i = 0; i < futResults.size(); i++) {
             ScanResult result = null;
             try {
                 result = futResults.get(i).get(); // get() blocks until the result is available
-
+                System.out.println("returned results no "+ i);
                 // Only keep scans that had results
-                if (result.hitLocs.length > 0) results.add(result);
+                if (result.hitLocs.length > 0) {
+                	results.add(result);
+                	System.out.println("No hits!!! "+ result.pwmLabel + " " + result.seqLabel);
+                }
             } catch (Exception e) {
                 System.err.println(e.getMessage());
                 e.printStackTrace();
                 break;
             }
         }
+        System.out.println(results.size() + " results got returned!");
 
         // Open file for printing observations
         PrintWriter outFileLocs = null;
