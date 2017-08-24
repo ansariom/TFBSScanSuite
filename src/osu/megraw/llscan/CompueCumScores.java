@@ -216,7 +216,6 @@ public class CompueCumScores {
                     if (result.hitLocs.length > 0) results.add(result);
 //                    futResults.add(threadPool.submit(run));
                 }
-                System.out.println("pwm " + pwms.labels[nmat] + " finished!");
             }
         }
 
