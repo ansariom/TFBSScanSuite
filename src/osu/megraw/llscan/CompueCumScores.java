@@ -168,36 +168,10 @@ public class CompueCumScores {
         //       to null - this should instantiate the Background object to assume a 0th order
         //       when ScanRunner uses it.
 
-        System.out.println("Generating local background sequence distributions ");
-//        Set<Future<Background>> set = new HashSet<Future<Background>>();
-        
+        System.out.println("Generating local background sequence distributions");
+
+        // Generate local sequence background distributions for all our promoter sequences
         Hashtable <String, Background> bgModels = new Hashtable <String, Background>();
-//        if (BG_WIN > 0) {
-//        	for (int i = 0; i < seqLabels.length; i++) {
-//        		int current = i + 1;
-//              System.err.print("\rGetting BG for " + seqLabels[i] + ": " + current + " / " + seqLabels.length); 
-//              BGRunner bgRunner = new BGRunner(S[i], BG_WIN, seqLabels[i]);
-//              Future<Background> futureBG = pool.submit(bgRunner);
-//              set.add(futureBG);
-//              if (i < seqLabels.length - 1) {
-//                System.err.print("\r                                                        ");
-//              } else {
-//            	  System.err.println();
-//              }
-//        	}
-//        	
-//        	System.err.println("Collecting BG results ..");
-//        	for (Future<Background> futureBG: set) {
-//        		Background background = futureBG.get();
-//        		bgModels.put(background.seqLabel, background);
-//        		System.err.println("\rBG for : " + background.seqLabel + " competed!");
-//        	}
-//        } else {
-//          bgModels.put("", new Background()); // Store equal background model under an empty string
-//        }
-        
-//        System.out.println("BG models are completed!");
-        
         if (BG_WIN > 0) {
             for (int i = 0; i < seqLabels.length; i++) {
                 int current = i + 1;
@@ -206,7 +180,7 @@ public class CompueCumScores {
                 double[][][] B_M1 = Utils.getWholeSeqLocalM1Background(S[i], BG_WIN);
                 bgModels.put(seqLabels[i], new Background(seqLabels[i], B, B_M1));
                 if (i < seqLabels.length - 1) {
-                    System.err.print("\r                                                        /       ");
+                    System.err.print("\r                                                               ");
                 } else {
                     System.err.println();
                 }
@@ -226,41 +200,41 @@ public class CompueCumScores {
             Scores = new DoubleColReturn(pwms.labels);
         }
 
-        System.out.println("Setting up threads ... ");
         // Setup / run all the scans!
-//        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
         List<Future<ScanResult>> futResults = new ArrayList<Future<ScanResult>>();
 
+        List<ScanResult> results = new ArrayList<ScanResult>();
         int totalStrands = (strand.equals("BOTH"))? 2 : 1;
         for (int strandNum = 0; strandNum < totalStrands; strandNum++) {
             strand = (totalStrands == 2)? strands[strandNum] : strand;
             for (int nmat = 0; nmat < pwms.pwms.length; nmat++) {
                 for (int nseq = 0; nseq < S.length; nseq++) {
-                	/**
-                	 * Mitra Memory issue
-                	 */
                     Background BG = bgModels.get(seqLabels[nseq]);
                     ScanRunner run = new ScanRunner(S[nseq], pwms.pwms[nmat], strand, BG, Scores.values[nmat], nucsAfterTSS, pwms.labels[nmat], seqLabels[nseq]);
-                    futResults.add(pool.submit(run));
+                    ScanResult result = run.call();
+                    if (result.hitLocs.length > 0) results.add(result);
+//                    futResults.add(threadPool.submit(run));
                 }
+                System.out.println("pwm " + pwms.labels[nmat] + " finished!");
             }
         }
 
-        // Get all the scan results!
-        List<ScanResult> results = new ArrayList<ScanResult>();
-        for (int i = 0; i < futResults.size(); i++) {
-            ScanResult result = null;
-            try {
-                result = futResults.get(i).get(); // get() blocks until the result is available
-//                System.out.println(Calendar.getInstance().getTime() + " : completed -- " + result.pwmLabel + " nhits = " + result.hitLocs.length );
-                // Only keep scans that had results
-                if (result.hitLocs.length > 0) results.add(result);
-            } catch (Exception e) {
-                System.err.println(e.getMessage());
-                e.printStackTrace();
-                break;
-            }
-        }
+//        // Get all the scan results!
+//        List<ScanResult> results = new ArrayList<ScanResult>();
+//        for (int i = 0; i < futResults.size(); i++) {
+//            ScanResult result = null;
+//            try {
+//                result = futResults.get(i).get(); // get() blocks until the result is available
+//
+//                // Only keep scans that had results
+//                if (result.hitLocs.length > 0) results.add(result);
+//            } catch (Exception e) {
+//                System.err.println(e.getMessage());
+//                e.printStackTrace();
+//                break;
+//            }
+//        }
 
         // Open file for printing observations
         PrintWriter outFileLocs = null;
@@ -268,7 +242,7 @@ public class CompueCumScores {
         PrintWriter outFileCumScores = null;
 //        PrintWriter outFileTables = null;
 
-        List<Future<String>> submittedPlots = new ArrayList<Future<String>>();
+//        List<Future<String>> submittedPlots = new ArrayList<Future<String>>();
         
         for (int strandNum = 0; strandNum < totalStrands; strandNum++) {
             strand = (totalStrands == 2)? strands[strandNum] : strand;
