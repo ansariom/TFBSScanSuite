@@ -76,9 +76,9 @@ public class GenFeaturesTiledWindows {
 	
 	// This is main method to compute log-likelihood scores within each window for each sequence in parallel
 	private void getWinScores() throws Exception {
-		ThreadPoolExecutor threadPool = new ThreadPoolExecutor(nproc, nproc, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
-        List<Future<LoglikScoreResult>> results = new ArrayList<Future<LoglikScoreResult>>();
-        ArrayList<String> futureSeqNames = new ArrayList<String>();
+//		ThreadPoolExecutor threadPool = new ThreadPoolExecutor(nproc, nproc, 4, TimeUnit.SECONDS, new LinkedBlockingQueue());
+//        List<Future<LoglikScoreResult>> results = new ArrayList<Future<LoglikScoreResult>>();
+//        ArrayList<String> futureSeqNames = new ArrayList<String>();
         
      // file to output mapped genomic coordinates to
         PrintWriter mapOutFile = null;
@@ -88,23 +88,26 @@ public class GenFeaturesTiledWindows {
             mapOutFile.println("seq_id\tfeature_id\trelative_start\trelative_end\ttss_start\tabsolute_start\tabsolute_end\tref_seq\tgenomic_start\tgenomic_end");
         }
         
+        List<LoglikScoreResult> final_results = new ArrayList<>();
         // Iterate over sequences 
         for (int i = 0; i < sequenceCharArr.length; i++) {
         	String seqName = seqLabels[i];
         	ComputeLoglikScoreThread computeLoglikScoreThread = new ComputeLoglikScoreThread(sequenceCharArr[i], scoreCutOffs, nucsAfterTSS, BG_WIN, seqName, pwms, windowsHash, winsWidth);
-        	
-        	try {
-				results.add(threadPool.submit(computeLoglikScoreThread));
-                futureSeqNames.add(seqName);
-            }
-            catch (Exception ex) {
-                System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
-                threadPool.shutdownNow();
-                while(!threadPool.isTerminated()) {
-                    threadPool.awaitTermination(2, TimeUnit.SECONDS);
-                }
-                System.exit(1);
-            }
+        	LoglikScoreResult loglikScoreResult = computeLoglikScoreThread.call();
+        	final_results.add(loglikScoreResult);
+//        	futureSeqNames.add(seqName);
+//        	try {
+//				results.add(threadPool.submit(computeLoglikScoreThread));
+//                futureSeqNames.add(seqName);
+//            }
+//            catch (Exception ex) {
+//                System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
+//                threadPool.shutdownNow();
+//                while(!threadPool.isTerminated()) {
+//                    threadPool.awaitTermination(2, TimeUnit.SECONDS);
+//                }
+//                System.exit(1);
+//            }
         	
             if (map_Fname != null) {
                 RefSeqData refData = fastaCoords.get(seqName);
@@ -142,53 +145,26 @@ public class GenFeaturesTiledWindows {
         }
         if (map_Fname != null) mapOutFile.close();
         
-        process_results(results, threadPool, futureSeqNames);
+        process_results(final_results);
+//        process_results(results, threadPool, futureSeqNames);
         
-        threadPool.shutdownNow();
-        while(!threadPool.isTerminated()) {
-            threadPool.awaitTermination(2, TimeUnit.SECONDS);
-        }
+//        threadPool.shutdownNow();
+//        while(!threadPool.isTerminated()) {
+//            threadPool.awaitTermination(2, TimeUnit.SECONDS);
+//        }
         System.out.println("Complete");
 
     }
       
 
 
-	private void process_results(List<Future<LoglikScoreResult>> results, ThreadPoolExecutor threadPool, 
-			ArrayList<String> futureSeqNames) throws Exception {
+	private void process_results(List<LoglikScoreResult> finalResults) throws Exception {
         int numFeatures = -1; // Number of columns printed out - queried from the results array length found below...
 
-		ArrayList <LoglikScoreResult> finalResults = new ArrayList <LoglikScoreResult>();
+//		ArrayList <LoglikScoreResult> finalResults = new ArrayList <LoglikScoreResult>();
 		String[] seqContentNames = {"GCcontent", "CAcontent", "GAcontent"};
 	    int currentSeq = 0; // If error is thrown, keep track of sequence we were on so error prints out
 	       						// the actual sequence being worked on
-	    for (int j = 0; j < results.size(); j++) {
-	    	Future<LoglikScoreResult> result = results.get(j);
-	
-	    	LoglikScoreResult res = null;
-	    	try {
-	    		res = result.get(); // get() blocks until the result is available
-	    		
-	    		finalResults.add(res);
-	
-//	    		numberNonzeros += res.numberNonzeros;
-	
-	    		// Set the numFeatures equal to number of values obtained from results - all scans should have the
-	    		// *same* number of features generated, so only need to set this once
-	    		if (numFeatures == -1) numFeatures = res.featureHash.size();
-	    		
-	    		currentSeq += 1;
-	    	} catch (Exception ex) {
-                String seqName = futureSeqNames.get(currentSeq);
-                System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
-                threadPool.shutdownNow();
-                while(!threadPool.isTerminated()) {
-                    threadPool.awaitTermination(2, TimeUnit.SECONDS);
-                }
-                System.exit(1);
-            }
-	    }
-	    	
     	// Write out features
         PrintWriter outFileVars = new PrintWriter(new FileWriter(out_Fname));
         
@@ -221,6 +197,74 @@ public class GenFeaturesTiledWindows {
         outFileVars.flush();
         outFileVars.close();
 
+	}
+	private void process_results(List<Future<LoglikScoreResult>> results, ThreadPoolExecutor threadPool, 
+			ArrayList<String> futureSeqNames) throws Exception {
+		int numFeatures = -1; // Number of columns printed out - queried from the results array length found below...
+		
+		ArrayList <LoglikScoreResult> finalResults = new ArrayList <LoglikScoreResult>();
+		String[] seqContentNames = {"GCcontent", "CAcontent", "GAcontent"};
+		int currentSeq = 0; // If error is thrown, keep track of sequence we were on so error prints out
+		// the actual sequence being worked on
+		for (int j = 0; j < results.size(); j++) {
+			Future<LoglikScoreResult> result = results.get(j);
+			
+			LoglikScoreResult res = null;
+			try {
+				res = result.get(); // get() blocks until the result is available
+				
+				finalResults.add(res);
+				
+//	    		numberNonzeros += res.numberNonzeros;
+				
+				// Set the numFeatures equal to number of values obtained from results - all scans should have the
+				// *same* number of features generated, so only need to set this once
+				if (numFeatures == -1) numFeatures = res.featureHash.size();
+				
+				currentSeq += 1;
+			} catch (Exception ex) {
+				String seqName = futureSeqNames.get(currentSeq);
+				System.err.println("Error processing example "+seqName+": "+ex.getMessage()+". Quitting.");
+				threadPool.shutdownNow();
+				while(!threadPool.isTerminated()) {
+					threadPool.awaitTermination(2, TimeUnit.SECONDS);
+				}
+				System.exit(1);
+			}
+		}
+		
+		// Write out features
+		PrintWriter outFileVars = new PrintWriter(new FileWriter(out_Fname));
+		
+		// Print header
+		for (String strand : strands) {
+			for (String pwmID : pwms.labels) {
+				for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
+					String featureId = pwmID + "_" + strand + "_" + winNo + "_tile" + winsWidth;
+					outFileVars.print("\t" + featureId);
+				}
+			}	        	
+		}
+//        outFileVars.print("\t" + "GCcontent\tCAcontent\tGAcontent");
+		outFileVars.println();
+		
+		// Print results
+		for (int i = 0; i < finalResults.size(); i++) {
+			LoglikScoreResult res = finalResults.get(i);
+			outFileVars.print(res.sampleName);
+			for (String strand : strands) {
+				for (String pwmID : pwms.labels) {
+					for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
+						String featureId = pwmID + "_" + strand + "_" + winNo + "_tile" + winsWidth;
+						outFileVars.print("\t" + res.featureHash.get(featureId));
+					}
+				}	        	
+			}
+			outFileVars.println();
+		}
+		outFileVars.flush();
+		outFileVars.close();
+		
 	}
 
 	private void createWins() {
