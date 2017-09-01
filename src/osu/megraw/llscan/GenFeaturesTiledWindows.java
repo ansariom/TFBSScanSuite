@@ -340,9 +340,10 @@ public class GenFeaturesTiledWindows {
                     return;
                 }
                 try {
-                    String ref = genomic_parts[genomic_parts.length - 2];
-                    int start = Integer.parseInt(genomic_parts[genomic_parts.length - 1]);
-                    RefSeqData refData = new RefSeqData(ref, start);
+                    String ref = genomic_parts[1]; // Chromosome
+                    int start = Integer.parseInt(genomic_parts[2]); //promoter start location
+                    String strand = genomic_parts[3];
+                    RefSeqData refData = new RefSeqData(ref, start, strand);
                     fastaCoords.put(header_parts[0], refData);
                 }
                 catch (NumberFormatException e) {
