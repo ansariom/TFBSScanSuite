@@ -31,7 +31,7 @@ public class GenFeaturesTiledWindows {
 	String[] strands = {"FWD", "REV"};
 	public char[][] sequenceCharArr; // holds input sequences from input FASTA file
 	public DoubleColReturn scoreCutOffs;
-	public int nucsAfterTSS = -1;
+	public int nucsDownStream = -1;
 	public String scoreCutoffs_Fname = null;
     public int BG_WIN = 250;
     public int nproc = 1;
@@ -42,8 +42,8 @@ public class GenFeaturesTiledWindows {
     
     public boolean USE_MARKOV_1_BG = true;
 	private boolean help = false;
-	private Integer nucsUpsream;
-	private Integer nucsDownstream;
+	private Integer tilingNucsUpsream;
+	private Integer tilingNucsDownstream;
 	private Integer winsWidth;
 	private String inputSeqName;
 	String[] seqLabels;
@@ -92,7 +92,7 @@ public class GenFeaturesTiledWindows {
         // Iterate over sequences 
         for (int i = 0; i < sequenceCharArr.length; i++) {
         	String seqName = seqLabels[i];
-        	ComputeLoglikScoreThread computeLoglikScoreThread = new ComputeLoglikScoreThread(sequenceCharArr[i], scoreCutOffs, nucsAfterTSS, BG_WIN, seqName, pwms, windowsHash, winsWidth);
+        	ComputeLoglikScoreThread computeLoglikScoreThread = new ComputeLoglikScoreThread(sequenceCharArr[i], scoreCutOffs, nucsDownStream, BG_WIN, seqName, pwms, windowsHash, winsWidth);
         	LoglikScoreResult loglikScoreResult = computeLoglikScoreThread.call();
         	final_results.add(loglikScoreResult);
 //        	futureSeqNames.add(seqName);
@@ -110,8 +110,12 @@ public class GenFeaturesTiledWindows {
 //            }
         	
             if (map_Fname != null) {
-                RefSeqData refData = fastaCoords.get(seqName);
-                
+                RefSeqData seqInfo = fastaCoords.get(seqName);
+                if (seqInfo == null) {
+                    System.out.println(seqName);
+                    return;
+                }
+
                 for (String strand : strands) {
                 	for (String pwmID : pwms.labels) {
                 		int pwmIdx = pwms.labelIndex.get(pwmID);
@@ -119,24 +123,28 @@ public class GenFeaturesTiledWindows {
                 		for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
                 			int left = windowsHash.get(String.valueOf(winNo)).getL();
                 			int right = windowsHash.get(String.valueOf(winNo)).getR();        	        	
-        					int tssLoc = sequenceCharArr[i].length - nucsAfterTSS;
+        					int tssLoc = sequenceCharArr[i].length - nucsDownStream;
         					int winL = left + tssLoc;
                             int winR = right + tssLoc;
                             if (winL < 0) { winL = 0; }
                             if (winR > sequenceCharArr[i].length - w) { winR = sequenceCharArr[i].length - w; }
                             
-                            // Shouldn't be missing from the hashmap that we set up above...error introduced in the code most likely 
-                            if (refData == null) {
-                                System.out.println(seqName);
-                                return;
+                            if (seqInfo.strand.equalsIgnoreCase("-")) {
+                            	int upstreamLen = sequenceCharArr[i].length - nucsDownStream - 1;
+                            	tssLoc = sequenceCharArr[i].length - upstreamLen;
+                            	
+                            	winL = (-1 * windowsHash.get(String.valueOf(winNo)).getR()) + tssLoc; 
+                            	winR = (-1 * windowsHash.get(String.valueOf(winNo)).getL()) + tssLoc;
+                            	if (winL < 0) { winL = 0; }
+                            	if (winR > sequenceCharArr[i].length - w) { winR = sequenceCharArr[i].length - w; }
                             }
+                            int genomic_start = seqInfo.start + winL;
+                            int genomic_end = seqInfo.start + winR;
                             
                             String featureId = pwmID + "_" + strand + "_" + winNo + "_tile" + winsWidth;
 
-                            int genomic_start = refData.start + winL;
-                            int genomic_end = refData.start + winR;
                             mapOutFile.println(seqName + "_0" + "\t" + featureId + "\t" + left + "\t" + right + "\t" + 
-                                               tssLoc + "\t" + winL + "\t" + winR + "\t" + refData.id + "\t" + genomic_start + "\t" + genomic_end);
+                                               tssLoc + "\t" + winL + "\t" + winR + "\t" + seqInfo.id + "\t" + genomic_start + "\t" + genomic_end);
                             
         				}
         	        }
@@ -269,11 +277,9 @@ public class GenFeaturesTiledWindows {
 
 	private void createWins() {
 		// Compute the windows coordinates relative to TSS mode and store them in windowHash
-		int tssModeLoc = seqLength - nucsAfterTSS - 1;
-		System.out.println("tssMod = " + tssModeLoc);
-		int winCount = (nucsUpsream + nucsDownstream) / winsWidth;
+		int winCount = (tilingNucsUpsream + tilingNucsDownstream) / winsWidth;
 		
-		int currentWinL = -1 * nucsUpsream;
+		int currentWinL = -1 * tilingNucsUpsream;
 		for (int winNo = 1; winNo <= winCount; winNo++) {
 			int left = currentWinL;
 			int right = currentWinL + winsWidth;
@@ -317,8 +323,8 @@ public class GenFeaturesTiledWindows {
         }
         
         // no TSS offset given - autoset it to midpoint of input sequence length
-        if (nucsAfterTSS == -1) {
-            nucsAfterTSS = seqLength / 2;  // integer arithmetic - automatically floors
+        if (nucsDownStream == -1) {
+            nucsDownStream = seqLength / 2;  // integer arithmetic - automatically floors
         }
         
         // Store FASTA seq's coordinates in hashmap
@@ -396,11 +402,11 @@ public class GenFeaturesTiledWindows {
                 }
                 
                 if (cmdLine.hasOption("nucsUp")) {
-                	nucsUpsream = Integer.parseInt(cmdLine.getOptionValue("nucsUp"));
+                	tilingNucsUpsream = Integer.parseInt(cmdLine.getOptionValue("nucsUp"));
                 }
 
                 if (cmdLine.hasOption("nucsDown")) {
-                	nucsDownstream = Integer.parseInt(cmdLine.getOptionValue("nucsDown"));
+                	tilingNucsDownstream = Integer.parseInt(cmdLine.getOptionValue("nucsDown"));
                 }
                 
                 if (cmdLine.hasOption("winWidth")) {
@@ -416,7 +422,7 @@ public class GenFeaturesTiledWindows {
                 }
 
                 if (cmdLine.hasOption("nucsAfterTSS")) {
-                    nucsAfterTSS = Integer.parseInt(cmdLine.getOptionValue("nucsAfterTSS"));
+                    nucsDownStream = Integer.parseInt(cmdLine.getOptionValue("nucsAfterTSS"));
                 }
 
                 if (cmdLine.hasOption("pseudoCounts")) {
