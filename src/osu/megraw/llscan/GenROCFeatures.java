@@ -1,10 +1,15 @@
 package osu.megraw.llscan;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -33,6 +38,10 @@ public class GenROCFeatures {
     public String map_Fname = null;
     public String pwms_Fname;
     public String out_Fname;
+	private Integer tilingNucsUpsream;
+	private Integer tilingNucsDownstream;
+	private Integer winsWidth;
+
     
     public boolean USE_MARKOV_1_BG = true;
 	private boolean help = false;
@@ -43,6 +52,10 @@ public class GenROCFeatures {
 	
 	HashMap <String, RefSeqData> fastaCoords = new HashMap <String, RefSeqData>();
 	PWMReturn pwms = null;
+	private String rootOcRegionsFile;
+	private String leafOcRegionsFile;
+	private HashMap<String, List<Coordinate>> leafOCHash = new HashMap<>();
+	private HashMap<String, List<Coordinate>> rootOCHash = new HashMap<>();
 
     public static double[] bgdefault = {0.25, 0.25, 0.25, 0.25};
     public static double[][] bgM1default = {{0.25, 0.25, 0.25, 0.25},
@@ -56,6 +69,9 @@ public class GenROCFeatures {
 			genROCFeatures.parseArgs(args);
 			genROCFeatures.readPromoterSeq();
 			genROCFeatures.readPWMsInfo();
+			genROCFeatures.readOCRegions();
+			genROCFeatures.createWins();
+			genROCFeatures.getOCScores();
 			System.out.println("DONE!");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -63,6 +79,124 @@ public class GenROCFeatures {
 
 	}
 	
+	private void readOCRegions() {
+		// Read root and lead oc regions separately
+		try {
+			BufferedReader leafFile = new BufferedReader(new FileReader(leafOcRegionsFile));
+			BufferedReader rootFile = new BufferedReader(new FileReader(rootOcRegionsFile));
+			
+			String line = null;
+			while ((line = leafFile.readLine()) != null) {
+				line.trim();
+				String[] parts = line.split("\t");
+				String tssName = parts[0];
+				String chrom = parts[2];
+				int relLeft = Integer.valueOf(parts[5]);
+				int relRight = Integer.valueOf(parts[6]);
+				
+				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
+				List<Coordinate> coordinateList = leafOCHash.get(tssName);
+				if (coordinateList == null) 
+					coordinateList = new ArrayList<>();
+				coordinateList.add(coordinate);
+				leafOCHash.put(tssName, coordinateList);
+			}
+			
+			leafFile.close();
+			
+			line = null;
+			while ((line = rootFile.readLine()) != null) {
+				line.trim();
+				String[] parts = line.split("\t");
+				String tssName = parts[0];
+				String chrom = parts[2];
+				int relLeft = Integer.valueOf(parts[5]);
+				int relRight = Integer.valueOf(parts[6]);
+				
+				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
+				List<Coordinate> coordinateList = rootOCHash.get(tssName);
+				if (coordinateList == null) 
+					coordinateList = new ArrayList<>();
+				coordinateList.add(coordinate);
+				rootOCHash.put(tssName, coordinateList);
+			}
+			
+			rootFile.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	private void createWins() {
+		// Compute the windows coordinates relative to TSS mode and store them in windowHash
+		int winCount = (tilingNucsUpsream + tilingNucsDownstream) / winsWidth;
+		
+		int currentWinL = -1 * tilingNucsUpsream;
+		for (int winNo = 1; winNo <= winCount; winNo++) {
+			int left = currentWinL;
+			int right = currentWinL + winsWidth;
+			
+			LefRightPair<Integer, Integer> winCoordinate = new LefRightPair<Integer, Integer>(left, right);
+			windowsHash.put(String.valueOf(winNo), winCoordinate);
+			
+			currentWinL = right;
+		}
+	}
+
+	private void getOCScores() throws Exception {
+		List<LoglikScoreResult> final_results = new ArrayList<>();
+        // Iterate over sequences 
+        for (int i = 0; i < sequenceCharArr.length; i++) {
+        	String seqName = seqLabels[i];
+        	List<Coordinate> leafCoords = leafOCHash.get(seqName);
+        	List<Coordinate> rootCoords = rootOCHash.get(seqName);
+        	ComputeLoglikScoreROC computeLoglikScoreThread = new ComputeLoglikScoreROC(sequenceCharArr[i], scoreCutOffs, nucsAfterTSS, BG_WIN, seqName, pwms, windowsHash, winsWidth, leafCoords, rootCoords, tilingNucsUpsream);
+        	LoglikScoreResult loglikScoreResult = computeLoglikScoreThread.call();
+        	final_results.add(loglikScoreResult);
+        }
+        process_results(final_results);
+	}
+	
+	private void process_results(List<LoglikScoreResult> finalResults) throws Exception {
+    	// Write out features
+        PrintWriter outFileVars = new PrintWriter(new FileWriter(out_Fname));
+        
+        // Print header
+        for (String strand : strands) {
+        	for (String pwmID : pwms.labels) {
+    	        for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
+    	        	String featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_LEAF_" + winsWidth;
+    	        	outFileVars.print("\t" + featureId);
+    	        	featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth;
+    	        	outFileVars.print("\t" + featureId);
+    	        }
+        	}	        	
+        }
+        outFileVars.println();
+        
+        // Print results
+        for (int i = 0; i < finalResults.size(); i++) {
+            LoglikScoreResult res = finalResults.get(i);
+            outFileVars.print(res.sampleName);
+	        for (String strand : strands) {
+	        	for (String pwmID : pwms.labels) {
+	    	        for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
+	    	        	String featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_LEAF_" + winsWidth;
+	    	        	outFileVars.print("\t" + res.featureHash.get(featureId));
+	    	        	featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth;
+	    	        	outFileVars.print("\t" + res.featureHash.get(featureId));
+	    	        }
+	        	}	        	
+	        }
+            outFileVars.println();
+        }
+        outFileVars.flush();
+        outFileVars.close();
+
+	}
+
+
 	private void readPWMsInfo() throws Exception {
         // Read PWM file, store rev comp PWMs for scanning opposite strand
         pwms = Load.loadPWMFileSimpleHeader(pwms_Fname, PseudoCountsVal);
@@ -178,8 +312,12 @@ public class GenROCFeatures {
                     scoreCutoffs_Fname = cmdLine.getOptionValue("minScores");
                 }
 
-                if (cmdLine.hasOption("mapFile")) {
-                    map_Fname = cmdLine.getOptionValue("mapFile");
+                if (cmdLine.hasOption("leafOC")) {
+                    leafOcRegionsFile = cmdLine.getOptionValue("leafOC");
+                }
+                
+                if (cmdLine.hasOption("rootOC")) {
+                    rootOcRegionsFile = cmdLine.getOptionValue("rootOC");
                 }
 
                 if (cmdLine.hasOption("nucsAfterTSS")) {
@@ -189,6 +327,18 @@ public class GenROCFeatures {
                 if (cmdLine.hasOption("pseudoCounts")) {
                     PseudoCountsVal = Double.parseDouble(cmdLine.getOptionValue("pseudoCounts"));
                 }
+                if (cmdLine.hasOption("nucsUp")) {
+                	tilingNucsUpsream = Integer.parseInt(cmdLine.getOptionValue("nucsUp"));
+                }
+
+                if (cmdLine.hasOption("nucsDown")) {
+                	tilingNucsDownstream = Integer.parseInt(cmdLine.getOptionValue("nucsDown"));
+                }
+                
+                if (cmdLine.hasOption("winWidth")) {
+                	winsWidth = Integer.parseInt(cmdLine.getOptionValue("winWidth"));
+                }
+
                 
             }
         }
@@ -205,7 +355,7 @@ public class GenROCFeatures {
 
         if (help) {
             OptionComparator<Option> opt_order = new OptionComparator<>();
-            String cmdLineSyntax = "java -jar GenFeaturesTiledWindows tfbs_llscan.jar <upstream nucs> <downstream nucs> <window width> <sequence.fasta> <PWM_FILE> <Outfile.rdat>";
+            String cmdLineSyntax = "java -jar GenROCFeaturesTile tfbs_llscan.jar <upstream nucs> <downstream nucs> <window width> <sequence.fasta> <PWM_FILE> <Outfile.rdat>";
             String header = "\nJava tool for generating features within non-overlapping windows of given width from -nucsUpstream to +nucsDownstream of TSS  for loglikelihood " + 
                             "scans of FASTA sequences.\n\nOPTIONS\n\n";
             String footer = "";
@@ -258,7 +408,26 @@ public class GenROCFeatures {
 	            .required(false)
 	            .type(Double.class)
 	            .build());
+	        	        
+	        // Width of of each window
+	        options.addOption(Option.builder()
+	        		.longOpt("leafOC")
+	        		.hasArg(true)
+	        		.argName("String")
+	        		.desc("OC regions for leaf")
+	        		.required(true)
+	        		.type(Double.class)
+	        		.build());
 	        
+	        options.addOption(Option.builder()
+	        		.longOpt("rootOC")
+	        		.hasArg(true)
+	        		.argName("String")
+	        		.desc("OC regions for root")
+	        		.required(true)
+	        		.type(Double.class)
+	        		.build());
+	            
 	        // How many upstream nts take for windowing promoter?
 	        options.addOption(Option.builder()
 	        		.longOpt("nucsUp")
@@ -288,7 +457,7 @@ public class GenROCFeatures {
 	        		.required(true)
 	        		.type(Double.class)
 	        		.build());
-	            
+
 	        // length of background window used for local background sequence calculations
 	        options.addOption(Option.builder("B")
 	            .longOpt("BGWIN")
@@ -307,16 +476,6 @@ public class GenROCFeatures {
 	            .required(false)
 	            .build());
 
-	        // score threshold file
-	        options.addOption(Option.builder()
-	            .longOpt("mapFile")
-	            .hasArg(true)
-	            .argName("FILENAME")
-	            .desc("file to output how scanned features are mapped to genomic coordinates.  (Note: requires that FASTA headers of your input sequences are formatted as follows \"><FASTAID>_<REFSEQ>_<START>\" " +
-	                  "where  <REFSEQ> is the reference sequence this FASTA sequence comes from, and <START> is the integer location where the sequence begins (1-indexed)")
-	            .required(false)
-	            .build());
-
 	        return options;
 	    }
 
@@ -326,19 +485,17 @@ public class GenROCFeatures {
 
 	        public OptionComparator () {
 	            OPTS_ORDER.add("help");
-	            OPTS_ORDER.add("pos");
-	            OPTS_ORDER.add("nucsUp");
-	            OPTS_ORDER.add("nucsDown");
-	            OPTS_ORDER.add("winWidth");
 	            OPTS_ORDER.add("nprocs");
 	            OPTS_ORDER.add("BGWIN");
 	            OPTS_ORDER.add("minScores");
-	            OPTS_ORDER.add("mapFile");
+	            OPTS_ORDER.add("leafOC");
+	            OPTS_ORDER.add("rootOC");
+	            OPTS_ORDER.add("nucsUp");
+	            OPTS_ORDER.add("nucsDown");
+	            OPTS_ORDER.add("winWidth");
 	            OPTS_ORDER.add("pseudoCounts");
 	            OPTS_ORDER.add("nucsAfterTSS");
 	            OPTS_ORDER.add("seqName");
-	            OPTS_ORDER.add("bin");
-	            OPTS_ORDER.add("byNT");
 	        }
 
 	        public int compare(T o1, T o2) {

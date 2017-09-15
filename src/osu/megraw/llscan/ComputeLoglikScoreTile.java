@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-public class ComputeLoglikScoreThread implements Callable<LoglikScoreResult>{
+public class ComputeLoglikScoreTile implements Callable<LoglikScoreResult>{
 
 	private String sampleName;
 	private int BG_WIN;
@@ -20,7 +20,7 @@ public class ComputeLoglikScoreThread implements Callable<LoglikScoreResult>{
 	long numberNonzeros = 0;
 	private int winsWidth = 100;
 
-	public ComputeLoglikScoreThread(char[] seq, DoubleColReturn scoreCutoffValue,
+	public ComputeLoglikScoreTile(char[] seq, DoubleColReturn scoreCutoffValue,
 			int nucsAfterTSS, int bG_WIN, String seqName, PWMReturn pwms, 
 			HashMap<String, LefRightPair<Integer, Integer>> windowsHash, int winsWidth) {
 		super();

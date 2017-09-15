@@ -29,6 +29,7 @@ public class TFBSMain {
                                   "GenFeatures", 
                                   "CumScore", 
                                   "GenFeaturesTiledWins",
+                                  "GenROCFeaturesTile",
                                   "MakePWMs", 
                                   "PWMprint", 
                                   "ROEFinder", 
@@ -49,6 +50,7 @@ public class TFBSMain {
                        "ROEFinder:   Generates regions of enrichment for a list of TFBSs.\n\n" +
                        "GenFeatures: Generates TFBS features within regions of enrichment and\n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
+                       "GenROCFeaturesTile: Generate loglik scores in tiliing arrays only in OC regions.\n\n " + 
                        "GenFeaturesTiledWins: Generates TFBS features within tiled windows \n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
                        "Additional utility commands exist to aid researchers in general scaning:\n\n" +
@@ -87,6 +89,8 @@ public class TFBSMain {
                 GenFeatures.main(new_args);
             } else if (command.equals("GenFeaturesTiledWins")) {
                 GenFeaturesTiledWindows.main(new_args);
+            } else if (command.equals("GenROCFeaturesTile")) {
+				GenROCFeatures.main(new_args);
             // Additional helper utilities
             } else if (command.equals("Background")) {
                 Background.main(new_args);

@@ -92,7 +92,7 @@ public class GenFeaturesTiledWindows {
         // Iterate over sequences 
         for (int i = 0; i < sequenceCharArr.length; i++) {
         	String seqName = seqLabels[i];
-        	ComputeLoglikScoreThread computeLoglikScoreThread = new ComputeLoglikScoreThread(sequenceCharArr[i], scoreCutOffs, nucsDownStream, BG_WIN, seqName, pwms, windowsHash, winsWidth);
+        	ComputeLoglikScoreTile computeLoglikScoreThread = new ComputeLoglikScoreTile(sequenceCharArr[i], scoreCutOffs, nucsDownStream, BG_WIN, seqName, pwms, windowsHash, winsWidth);
         	LoglikScoreResult loglikScoreResult = computeLoglikScoreThread.call();
         	final_results.add(loglikScoreResult);
 //        	futureSeqNames.add(seqName);
