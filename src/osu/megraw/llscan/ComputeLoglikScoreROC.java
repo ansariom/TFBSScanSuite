@@ -51,14 +51,26 @@ public class ComputeLoglikScoreROC implements Callable<LoglikScoreResult>{
         // Stores featureWinId and corresponding cumScore value
         HashMap<String, Double> featureHash = new HashMap<>();
 
+        if (openCoordinatesLeaf == null) {
+        	System.out.println("Open Chromatin is Null " + seqName);
+        	openCoordinatesLeaf = new ArrayList<>();
+        }
+        
+        if (openCoordinatesRoot == null) {
+        	System.out.println("Open Chromatin is Null " + seqName);
+        	openCoordinatesRoot = new ArrayList<>();
+        }
 		Collections.sort(openCoordinatesLeaf);
 		Collections.sort(openCoordinatesRoot);
 		
 		HashMap<Integer, List<Coordinate>> fullWinsLeaf = new HashMap<>();
 		
 		for (Coordinate coordinate : openCoordinatesLeaf) {
+//			System.out.println(coordinate);
 			int wlow = ((coordinate.getStart() + nucsUps)/winsWidth) + 1;
-			int wNext = ((coordinate.getEnd() + nucsUps)/winsWidth) + 1;
+			int wNext = ((coordinate.getEnd() + nucsUps)/winsWidth);
+			if ((coordinate.getEnd() + nucsUps) % winsWidth > 0)
+				wNext += 1;
 			
 			for (int w = wlow; w <= wNext; w++) {
 				int left = Math.max(winHash.get(String.valueOf(w)).getL(), coordinate.getStart());
@@ -79,7 +91,9 @@ public class ComputeLoglikScoreROC implements Callable<LoglikScoreResult>{
 		
 		for (Coordinate coordinate : openCoordinatesRoot) {
 			int wlow = ((coordinate.getStart() + nucsUps)/winsWidth) + 1;
-			int wNext = ((coordinate.getEnd() + nucsUps)/winsWidth) + 1;
+			int wNext = ((coordinate.getEnd() + nucsUps)/winsWidth);
+			if ((coordinate.getEnd() + nucsUps) % winsWidth > 0)
+				wNext += 1;
 			
 			for (int w = wlow; w <= wNext; w++) {
 				int left = Math.max(winHash.get(String.valueOf(w)).getL(), coordinate.getStart());

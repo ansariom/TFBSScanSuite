@@ -183,6 +183,7 @@ public class GenROCFeatures {
 	        	for (String pwmID : pwms.labels) {
 	    	        for (int winNo = 1; winNo <= windowsHash.size(); winNo++) {
 	    	        	String featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_LEAF_" + winsWidth;
+//	    	        	System.out.println(featureId);
 	    	        	outFileVars.print("\t" + res.featureHash.get(featureId));
 	    	        	featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth;
 	    	        	outFileVars.print("\t" + res.featureHash.get(featureId));
