@@ -111,8 +111,9 @@ public class ComputeLoglikScoreROC implements Callable<LoglikScoreResult>{
 		}
         
         for (String strand : strands) {
-	        for (int winNo = 1; winNo <= winHash.size(); winNo++) {
-				for (String pwmID : pwms.labels) {
+			for (String pwmID : pwms.labels) {
+				double rootWinSum = 0.0, leafWinSum = 0.0;
+				for (int winNo = 1; winNo <= winHash.size(); winNo++) {
 					String featureIdLeaf = pwmID + "_" + strand + "_" + winNo + "_ROC_LEAF_" + winsWidth ;
 					String featureIdRoot = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth ;
 					
@@ -131,6 +132,7 @@ public class ComputeLoglikScoreROC implements Callable<LoglikScoreResult>{
 						    double score = Utils.getCumScoreInWindow(coordinate.getStart(), coordinate.getEnd(), seq, ThetaT, strand,
 		                            B, B_M1, scoreCutoffValue.values[pwmIdx], nucsAfterTSS);
 						    winScore += score;
+						    leafWinSum += score;
 						}
 		        	}
 		        	featureHash.put(featureIdLeaf, winScore);
@@ -142,10 +144,16 @@ public class ComputeLoglikScoreROC implements Callable<LoglikScoreResult>{
 		        			double score = Utils.getCumScoreInWindow(coordinate.getStart(), coordinate.getEnd(), seq, ThetaT, strand,
 		        					B, B_M1, scoreCutoffValue.values[pwmIdx], nucsAfterTSS);
 		        			winScore += score;
+		        			rootWinSum += score;
 		        		}
 		        	}
 		        	featureHash.put(featureIdRoot, winScore);
 				}
+				
+				String featureIdRootCum = pwmID + "_" + strand + "_ROC_ROOT_OVERALL";
+				String featureIdLeafCum = pwmID + "_" + strand + "_ROC_LEAF_OVERALL";
+				featureHash.put(featureIdLeafCum, leafWinSum);
+				featureHash.put(featureIdRootCum, rootWinSum);
 			}
         }
         

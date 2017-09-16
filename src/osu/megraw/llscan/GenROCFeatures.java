@@ -171,6 +171,10 @@ public class GenROCFeatures {
     	        	featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth;
     	        	outFileVars.print("\t" + featureId);
     	        }
+    	        String featureId = pwmID + "_" + strand + "_ROC_LEAF_OVERALL";
+    	        outFileVars.print("\t" + featureId);
+    	        featureId = pwmID + "_" + strand + "_ROC_ROOT_OVERALL";
+    	        outFileVars.print("\t" + featureId);
         	}	        	
         }
         outFileVars.println();
@@ -188,6 +192,10 @@ public class GenROCFeatures {
 	    	        	featureId = pwmID + "_" + strand + "_" + winNo + "_ROC_ROOT_" + winsWidth;
 	    	        	outFileVars.print("\t" + res.featureHash.get(featureId));
 	    	        }
+	    	        String featureId = pwmID + "_" + strand + "_ROC_LEAF_OVERALL";
+	    	        outFileVars.print("\t" + res.featureHash.get(featureId));
+	    	        featureId = pwmID + "_" + strand + "_ROC_ROOT_OVERALL";
+	    	        outFileVars.print("\t" + res.featureHash.get(featureId));
 	        	}	        	
 	        }
             outFileVars.println();
