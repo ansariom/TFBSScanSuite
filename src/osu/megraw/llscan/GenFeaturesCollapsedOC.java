@@ -361,7 +361,6 @@ public class GenFeaturesCollapsedOC {
                 if (map_Fname != null) {
                     RefSeqData seqInfo = fastaCoords.get(seqName);
                     // Shouldn't be missing from the hashmap that we set up above...error introduced in the code most likely 
-                    HashMap<Integer, LefRightPair<Integer, Integer>> coordinateHash = new HashMap<>();
                     
                     if (seqInfo == null) {
                         System.out.println(seqName);
@@ -388,7 +387,7 @@ public class GenFeaturesCollapsedOC {
                             	tssLoc = S[i].length - upstreamLen;
                             	
                             	winL = (-1 * winVarR[wv]) + posArr[p] + tssLoc; 
-                            	winR = (-1 * winVarL[wv]) + posArr[p] + tssLoc; 
+                            	winR = (-1 * winVarL[wv-6]) + posArr[p] + tssLoc; 
                             	if (winL < 0) { winL = 0; }
                             	if (winR > S[i].length - w) { winR = S[i].length - w; }
                             	genomic_start = seqInfo.start + winL;
