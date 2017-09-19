@@ -373,29 +373,33 @@ public class GenFeaturesCollapsedOC {
                         int w = pwms.pwms[winVarPWMIdx].length;
                         
                         int winL = 0;
+                        int relLocL = 0;
+                        int relLocR = 0;
                 		if (wv % 7 == 0) {
                 			winL = winVarL[wv] + posArr[p] + tssLoc; 
                 			if (winL < 0) { winL = 0; }
+                			relLocL = winVarL[wv];
                 		} else if (wv % 7 == 6) {
                 			int winR = winVarR[wv] + posArr[p] + tssLoc;
                 			if (winR > S[i].length - w) { winR = S[i].length - w; }
                 			int genomic_start = seqInfo.start + winL;
                             int genomic_end = seqInfo.start + winR;
+                            
+                            relLocR = winVarR[wv];
 
                             if (seqInfo.strand.equalsIgnoreCase("-")) {
                             	int upstreamLen = S[i].length - nucsDownStream - 1;
                             	tssLoc = S[i].length - upstreamLen;
                             	
-                            	winL = (-1 * winVarR[wv]) + posArr[p] + tssLoc; 
-                            	winR = (-1 * winVarL[wv-6]) + posArr[p] + tssLoc; 
+                            	winL = (-1 * relLocR) + posArr[p] + tssLoc; 
+                            	winR = (-1 * relLocL) + posArr[p] + tssLoc; 
                             	if (winL < 0) { winL = 0; }
                             	if (winR > S[i].length - w) { winR = S[i].length - w; }
                             	genomic_start = seqInfo.start + winL;
                                 genomic_end = seqInfo.start + winR;
-                                
-                                mapOutFile.println(seqName + "_" + posArr[p] + "\t" + winVarNames[wv] + "\t" + winVarL[wv] + "\t" + winVarR[wv] + "\t" + 
-                                        tssLoc + "\t" + winL + "\t" + winR + "\t" + seqInfo.id + "\t" + genomic_start + "\t" + genomic_end);
                             }
+                            mapOutFile.println(seqName + "_" + posArr[p] + "\t" + winVarNames[wv] + "\t" + relLocL + "\t" + relLocR + "\t" + 
+                                    tssLoc + "\t" + winL + "\t" + winR + "\t" + seqInfo.id + "\t" + genomic_start + "\t" + genomic_end);
                         }
                     }
                 }
