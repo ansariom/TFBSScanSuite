@@ -37,6 +37,7 @@ public class TFBSMain {
                                   "Scan", 
                                   "Thresholds",
                                   "GenFeaturesByNT",
+                                  "GenFeaturesROECollapsedOC",
                                   "SeqMotifComputation"};
 
         HashSet <String> commands = new HashSet <String>();
@@ -51,6 +52,7 @@ public class TFBSMain {
                        "GenFeatures: Generates TFBS features within regions of enrichment and\n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
                        "GenROCFeaturesTile: Generate loglik scores in tiliing arrays only in OC regions.\n\n " + 
+                       "GenFeaturesROECollapsedOC : OC overlap is for entire ROE region" +
                        "GenFeaturesTiledWins: Generates TFBS features within tiled windows \n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
                        "Additional utility commands exist to aid researchers in general scaning:\n\n" +
@@ -89,6 +91,8 @@ public class TFBSMain {
                 GenFeatures.main(new_args);
             } else if (command.equals("GenFeaturesTiledWins")) {
                 GenFeaturesTiledWindows.main(new_args);
+            } else if (command.equals("GenFeaturesROECollapsedOC")) {
+            	GenFeaturesCollapsedOC.main(new_args);
             } else if (command.equals("GenROCFeaturesTile")) {
 				GenROCFeatures.main(new_args);
             // Additional helper utilities
