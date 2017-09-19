@@ -367,14 +367,15 @@ public class GenFeaturesCollapsedOC {
                         return;
                     }
                     int tssLoc = S[i].length - nucsDownStream; // for + strand 
+                    int winL = 0;
+                    int relLocL = 0;
+                    int relLocR = 0;
+
                     for(int wv = 0; wv < nWinVars; wv++) {
                         int winVarPWMIdx = winVarPWMIndex[wv];
                         String pwmIdx = pwms.labels[winVarPWMIdx];
                         int w = pwms.pwms[winVarPWMIdx].length;
                         
-                        int winL = 0;
-                        int relLocL = 0;
-                        int relLocR = 0;
                 		if (wv % 7 == 0) {
                 			winL = winVarL[wv] + posArr[p] + tssLoc; 
                 			if (winL < 0) { winL = 0; }
@@ -400,7 +401,7 @@ public class GenFeaturesCollapsedOC {
                             }
                             mapOutFile.println(seqName + "_" + posArr[p] + "\t" + winVarNames[wv] + "\t" + relLocL + "\t" + relLocR + "\t" + 
                                     tssLoc + "\t" + winL + "\t" + winR + "\t" + seqInfo.id + "\t" + genomic_start + "\t" + genomic_end);
-                        }
+                            relLocL = relLocR = winL = winR = 0;                        }
                     }
                 }
 			}
