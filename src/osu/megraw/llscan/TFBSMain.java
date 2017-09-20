@@ -38,6 +38,7 @@ public class TFBSMain {
                                   "Thresholds",
                                   "GenFeaturesByNT",
                                   "GenFeaturesROECollapsedOC",
+                                  "GenROEROCFeatures",
                                   "SeqMotifComputation"};
 
         HashSet <String> commands = new HashSet <String>();
@@ -51,8 +52,9 @@ public class TFBSMain {
                        "ROEFinder:   Generates regions of enrichment for a list of TFBSs.\n\n" +
                        "GenFeatures: Generates TFBS features within regions of enrichment and\n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
+                       "GenROEROCFeatures: Generate features where loglike scores are computed within oc regions for each window \n\n" + 
                        "GenROCFeaturesTile: Generate loglik scores in tiliing arrays only in OC regions.\n\n " + 
-                       "GenFeaturesROECollapsedOC : OC overlap is for entire ROE region" +
+                       "GenFeaturesROECollapsedOC : OC overlap is for entire ROE region \n\n" +
                        "GenFeaturesTiledWins: Generates TFBS features within tiled windows \n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
                        "Additional utility commands exist to aid researchers in general scaning:\n\n" +
@@ -93,6 +95,8 @@ public class TFBSMain {
                 GenFeaturesTiledWindows.main(new_args);
             } else if (command.equals("GenFeaturesROECollapsedOC")) {
             	GenFeaturesCollapsedOC.main(new_args);
+            } else if (command.equals("GenROEROCFeatures")) {
+            	GenROEROCFeatures.main(new_args);
             } else if (command.equals("GenROCFeaturesTile")) {
 				GenROCFeatures.main(new_args);
             // Additional helper utilities
