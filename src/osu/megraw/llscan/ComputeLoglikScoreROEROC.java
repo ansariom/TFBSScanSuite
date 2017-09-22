@@ -32,7 +32,7 @@ public class ComputeLoglikScoreROEROC implements Callable<LoglikScoreResult>{
 	public ComputeLoglikScoreROEROC(char[] seq, DoubleColReturn scoreCutOffs, int nucsAfterTSS, int bG_WIN,
 			String seqName, PWMReturn pwms, String[] winVarNames, int[] winVarL, int[] winVarR, int[] winVarPWMIndex,
 			String[] winVarStrand, HashMap<String, List<Coordinate>> leafCoordsHash,
-			HashMap<String, List<Coordinate>> rootCoordsHash) {
+			HashMap<String, List<Coordinate>> rootCoordsHash, int nWinVars) {
 		super();
 		this.seqName = seqName;
 		this.seq = seq;
@@ -46,6 +46,8 @@ public class ComputeLoglikScoreROEROC implements Callable<LoglikScoreResult>{
 		this.winVarL = winVarL;
 		this.winVarR = winVarR;
 		this.winVarPWMIndex = winVarPWMIndex;
+		this.nWinVars = nWinVars;
+		this.winVarStrand = winVarStrand;
 
 	}
 

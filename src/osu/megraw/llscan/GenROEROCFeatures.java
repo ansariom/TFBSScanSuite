@@ -92,7 +92,7 @@ public class GenROEROCFeatures {
 			
 			BufferedReader leafFile = new BufferedReader(new FileReader(leafInfile));
 			BufferedReader rootFile = new BufferedReader(new FileReader(rootInfile));
-			
+			leafOCHash = new HashMap<String, List<Coordinate>>();
 			String line = null;
 			while ((line = leafFile.readLine()) != null) {
 				line.trim();
@@ -103,7 +103,7 @@ public class GenROEROCFeatures {
 				int relRight = Integer.valueOf(parts[6]);
 				
 				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
-				leafOCHash = new HashMap<String, List<Coordinate>>();
+				
 				List<Coordinate> coordinateList = leafOCHash.get(winFacInfo);
 				if (coordinateList == null) {
 					coordinateList = new ArrayList<>();
@@ -115,6 +115,7 @@ public class GenROEROCFeatures {
 			leafFile.close();
 			
 			line = null;
+			rootOCHash = new HashMap<String, List<Coordinate>>();
 			while ((line = rootFile.readLine()) != null) {
 				line.trim();
 				String[] parts = line.split("\t");
@@ -124,7 +125,7 @@ public class GenROEROCFeatures {
 				int relRight = Integer.valueOf(parts[6]);
 				
 				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
-				rootOCHash = new HashMap<String, List<Coordinate>>();
+				
 				List<Coordinate> coordinateList = rootOCHash.get(winFacInfo);
 				if (coordinateList == null) {
 					coordinateList = new ArrayList<>();
@@ -216,7 +217,7 @@ public class GenROEROCFeatures {
         	readOCRegions(seqName+ "_0"); 
         	//
         	ComputeLoglikScoreROEROC computeLoglikScoreROEROC = new ComputeLoglikScoreROEROC(sequenceCharArr[i], scoreCutOffs, nucsAfterTSS, BG_WIN, seqName, pwms, winVarNames, 
-        			winVarL,  winVarR,  winVarPWMIndex,  winVarStrand, leafOCHash, rootOCHash);
+        			winVarL,  winVarR,  winVarPWMIndex,  winVarStrand, leafOCHash, rootOCHash, nWinVars);
         	LoglikScoreResult loglikScoreResult = computeLoglikScoreROEROC.call();
         	final_results.add(loglikScoreResult);
         }
