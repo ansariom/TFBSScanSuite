@@ -49,10 +49,10 @@ public class GenROEROCFeatures {
 	
 	HashMap <String, RefSeqData> fastaCoords = new HashMap <String, RefSeqData>();
 	PWMReturn pwms = null;
-	private String rootOcRegionsFile;
-	private String leafOcRegionsFile;
-	private HashMap<String, HashMap<String, List<Coordinate>>> leafOCHash = new HashMap<>();
-	private HashMap<String, HashMap<String, List<Coordinate>>> rootOCHash = new HashMap<>();
+	private String rootROCDir;
+	private String leafROCDir;
+	private HashMap<String, List<Coordinate>> leafOCHash = new HashMap<>();
+	private HashMap<String, List<Coordinate>> rootOCHash = new HashMap<>();
 	private String roeFWDTable;
 	private String roeREVTable;
 	private String[] winVarNames;
@@ -74,7 +74,7 @@ public class GenROEROCFeatures {
 			genROCFeatures.parseArgs(args);
 			genROCFeatures.readPromoterSeq();
 			genROCFeatures.readPWMsInfo();
-			genROCFeatures.readOCRegions();
+//			genROCFeatures.readOCRegions();
 			genROCFeatures.createWins();
 			genROCFeatures.getOCScores();
 			System.out.println("DONE!");
@@ -84,33 +84,32 @@ public class GenROEROCFeatures {
 
 	}
 	
-	private void readOCRegions() {
+	private void readOCRegions(String tssName) {
 		// Read root and lead oc regions separately
 		try {
-			BufferedReader leafFile = new BufferedReader(new FileReader(leafOcRegionsFile));
-			BufferedReader rootFile = new BufferedReader(new FileReader(rootOcRegionsFile));
+			String leafInfile = leafROCDir + "/" + tssName + ".overlap";
+			String rootInfile = rootROCDir + "/" + tssName + ".overlap";
+			
+			BufferedReader leafFile = new BufferedReader(new FileReader(leafInfile));
+			BufferedReader rootFile = new BufferedReader(new FileReader(rootInfile));
 			
 			String line = null;
 			while ((line = leafFile.readLine()) != null) {
 				line.trim();
 				String[] parts = line.split("\t");
-				String tssName = parts[0].split("%")[0];
 				String winFacInfo = parts[0].split("%")[1];
 				String chrom = parts[2];
 				int relLeft = Integer.valueOf(parts[5]);
 				int relRight = Integer.valueOf(parts[6]);
 				
 				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
-				HashMap<String, List<Coordinate>> hash = leafOCHash.get(tssName);
-				if (hash == null) 
-					hash = new HashMap<String, List<Coordinate>>();
-				List<Coordinate> coordinateList = hash.get(winFacInfo);
+				leafOCHash = new HashMap<String, List<Coordinate>>();
+				List<Coordinate> coordinateList = leafOCHash.get(winFacInfo);
 				if (coordinateList == null) {
 					coordinateList = new ArrayList<>();
 				}
 				coordinateList.add(coordinate);
-				hash.put(winFacInfo, coordinateList);
-				leafOCHash.put(tssName, hash);
+				leafOCHash.put(winFacInfo, coordinateList);
 			}
 			
 			leafFile.close();
@@ -119,23 +118,19 @@ public class GenROEROCFeatures {
 			while ((line = rootFile.readLine()) != null) {
 				line.trim();
 				String[] parts = line.split("\t");
-				String tssName = parts[0].split("%")[0];
 				String winFacInfo = parts[0].split("%")[1];
 				String chrom = parts[2];
 				int relLeft = Integer.valueOf(parts[5]);
 				int relRight = Integer.valueOf(parts[6]);
 				
 				Coordinate coordinate = new Coordinate(chrom, relLeft, relRight);
-				HashMap<String, List<Coordinate>> hash = rootOCHash.get(tssName);
-				if (hash == null) 
-					hash = new HashMap<String, List<Coordinate>>();
-				List<Coordinate> coordinateList = hash.get(winFacInfo);
+				rootOCHash = new HashMap<String, List<Coordinate>>();
+				List<Coordinate> coordinateList = rootOCHash.get(winFacInfo);
 				if (coordinateList == null) {
 					coordinateList = new ArrayList<>();
 				}
 				coordinateList.add(coordinate);
-				hash.put(winFacInfo, coordinateList);
-				rootOCHash.put(tssName, hash);
+				rootOCHash.put(winFacInfo, coordinateList);
 			}
 			
 			rootFile.close();
@@ -216,11 +211,12 @@ public class GenROEROCFeatures {
         // Iterate over sequences 
         for (int i = 0; i < sequenceCharArr.length; i++) {
         	String seqName = seqLabels[i];
-        	HashMap<String, List<Coordinate>> leafCoordsHash = leafOCHash.get(seqName);
-        	HashMap<String, List<Coordinate>> rootCoordsHash = rootOCHash.get(seqName);
         	
+        	// pull related open regions by seq name from input directory
+        	readOCRegions(seqName+ "_0"); 
+        	//
         	ComputeLoglikScoreROEROC computeLoglikScoreROEROC = new ComputeLoglikScoreROEROC(sequenceCharArr[i], scoreCutOffs, nucsAfterTSS, BG_WIN, seqName, pwms, winVarNames, 
-        			winVarL,  winVarR,  winVarPWMIndex,  winVarStrand, leafCoordsHash, rootCoordsHash);
+        			winVarL,  winVarR,  winVarPWMIndex,  winVarStrand, leafOCHash, rootOCHash);
         	LoglikScoreResult loglikScoreResult = computeLoglikScoreROEROC.call();
         	final_results.add(loglikScoreResult);
         }
@@ -377,11 +373,11 @@ public class GenROEROCFeatures {
                 }
 
                 if (cmdLine.hasOption("leafOC")) {
-                    leafOcRegionsFile = cmdLine.getOptionValue("leafOC");
+                    leafROCDir = cmdLine.getOptionValue("leafOC");
                 }
                 
                 if (cmdLine.hasOption("rootOC")) {
-                    rootOcRegionsFile = cmdLine.getOptionValue("rootOC");
+                    rootROCDir = cmdLine.getOptionValue("rootOC");
                 }
 
                 if (cmdLine.hasOption("nucsAfterTSS")) {
