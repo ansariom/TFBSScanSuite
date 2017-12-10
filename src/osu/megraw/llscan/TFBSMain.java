@@ -30,6 +30,7 @@ public class TFBSMain {
                                   "CumScore", 
                                   "GenFeaturesTiledWins",
                                   "GenROCFeaturesTile",
+                                  "GenFeaturesNormByMax",
                                   "MakePWMs", 
                                   "PWMprint", 
                                   "ROEFinder", 
@@ -51,6 +52,8 @@ public class TFBSMain {
                        "CumScore:   Generates loglike cumulitive scores for ROE finder.\n\n" +
                        "ROEFinder:   Generates regions of enrichment for a list of TFBSs.\n\n" +
                        "GenFeatures: Generates TFBS features within regions of enrichment and\n" +
+                       "             additional sequences features (GC/GA/CA content).\n\n" +
+                       "GenFeaturesNormByMax: Generates TFBS features within regions of enrichment and\n" +
                        "             additional sequences features (GC/GA/CA content).\n\n" +
                        "GenROEROCFeatures: Generate features where loglike scores are computed within oc regions for each window \n\n" + 
                        "GenROCFeaturesTile: Generate loglik scores in tiliing arrays only in OC regions.\n\n " + 
@@ -97,6 +100,8 @@ public class TFBSMain {
             	GenFeaturesCollapsedOC.main(new_args);
             } else if (command.equals("GenROEROCFeatures")) {
             	GenROEROCFeatures.main(new_args);
+            } else if (command.equals("GenFeaturesNormByMax")) {
+            	GenFeatures_byMax.main(new_args);
             } else if (command.equals("GenROCFeaturesTile")) {
 				GenROCFeatures.main(new_args);
             // Additional helper utilities
