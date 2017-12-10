@@ -1276,7 +1276,9 @@ public class GenFeatures_byMax {
 		// SHAWN
 		//System.out.println("Strand: " + strand +  " L: " + L + " R: " + R + " beyondTSS: " + beyondTSS + " score: " + cumScore);
         // Divide cumScore by (numLoc * Max_PWM_score)
-        return cumScore / (numLocs * maxPWMScore);
+        if (numLocs > 0) 
+        	return cumScore / (numLocs * maxPWMScore);
+        return 0;
 
     }
 
