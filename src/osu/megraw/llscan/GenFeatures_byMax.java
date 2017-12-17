@@ -1229,7 +1229,7 @@ public class GenFeatures_byMax {
         int winL = L + tssLoc;
         int winR = R + tssLoc;
 
-        double region_length = Math.abs(winL - winR);
+        double region_length = Double.valueOf(Math.abs(winL - winR)).doubleValue();
         
         if (winL < 0) { winL = 0; }
         if (winR > S.length - w) { winR = S.length - w; }
