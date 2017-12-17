@@ -1279,7 +1279,6 @@ public class GenFeatures_byMax {
 		//System.out.println("Strand: " + strand +  " L: " + L + " R: " + R + " beyondTSS: " + beyondTSS + " score: " + cumScore);
         // Divide cumScore by (numLoc * Max_PWM_score)
     	double dnum = region_length * maxPWMScore;
-    	System.out.println(cumScore + ", " + dnum  + " = "  + cumScore/dnum);
     	return cumScore / dnum;
 
     }
