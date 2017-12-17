@@ -1229,6 +1229,8 @@ public class GenFeatures_byMax {
         int winL = L + tssLoc;
         int winR = R + tssLoc;
 
+        double region_length = Math.abs(winL - winR);
+        
         if (winL < 0) { winL = 0; }
         if (winR > S.length - w) { winR = S.length - w; }
 
@@ -1263,7 +1265,7 @@ public class GenFeatures_byMax {
                 score = numLogSum - denLogSum;
                 if (score > Score) {
                 	// Record number of non-zero locations
-                	numLocs++;
+//                	numLocs++;
                     // Record cumulative score
                     cumScore += score;
                 }
@@ -1277,7 +1279,7 @@ public class GenFeatures_byMax {
 		//System.out.println("Strand: " + strand +  " L: " + L + " R: " + R + " beyondTSS: " + beyondTSS + " score: " + cumScore);
         // Divide cumScore by (numLoc * Max_PWM_score)
         if (numLocs > 0) 
-        	return cumScore / (numLocs * maxPWMScore);
+        	return cumScore / (region_length * maxPWMScore);
         return 0;
 
     }
