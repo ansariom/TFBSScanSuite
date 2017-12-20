@@ -621,6 +621,14 @@ public class GenFeaturesTiledWindows_byMax {
             .desc("file to read mininum threshold scores for scans to be added (default: all thresholds set to 0)")
             .required(false)
             .build());
+        
+        options.addOption(Option.builder()
+        		.longOpt("maxScores")
+        		.hasArg(true)
+        		.argName("FILENAME")
+        		.desc("file to read maximum scores of PWMs ")
+        		.required(false)
+        		.build());
 
         // score threshold file
         options.addOption(Option.builder()
