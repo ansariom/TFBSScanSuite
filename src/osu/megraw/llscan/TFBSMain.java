@@ -29,6 +29,7 @@ public class TFBSMain {
                                   "GenFeatures", 
                                   "CumScore", 
                                   "GenFeaturesTiledWins",
+                                  "GenFeaturesTiledNormByMax",
                                   "GenROCFeaturesTile",
                                   "GenFeaturesNormByMax",
                                   "MakePWMs", 
@@ -69,6 +70,7 @@ public class TFBSMain {
                        "PWMprint:    This utility generates normalized PWMs and can add 'pseudo counts'\n" +
                        "             to matrices prior to normalization to avoid problems with logs of '0'.\n\n" +
                        "MakePWMs:    This utility generates PWMs from a list of sequences.\n\n" +
+                       "GenFeaturesTiledNormByMax : normalized logscores by region size and max score of PWMs \n\n" + 
                        "GenFeaturesByNT: Generates loglik scores for each individual nucleotide within ROE windows\n\n" +
         			    "SeqMotifComputation: computes seq motif-related stats such as loglik score in M0 or M1, and Fp/FN rate of seqs with respect to BG/FG dist.\n\n";
 
@@ -117,7 +119,10 @@ public class TFBSMain {
                 GenFeaturesByNT.main(new_args);
             } else if (command.equals("SeqMotifComputation")) {
             	SeqMotifComputation.main(new_args);
-            }
+	        } else if (command.equals("GenFeaturesTiledNormByMax")) {
+	        	GenFeaturesTiledWindows_byMax.main(new_args);
+	        }
+            
         } else {
             System.out.print(usage);
             return;
