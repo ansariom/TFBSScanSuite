@@ -70,7 +70,7 @@ public class ComputeLoglikScoreTile_byMax implements Callable<LoglikScoreResult>
 				    double score = Utils.getCumScoreInWindow(left, right, seq, ThetaT, strand,
                             B, B_M1, scoreCutoffValue.values[pwmIdx], nucsAfterTSS);
 				    if (score != 0) numberNonzeros++;
-				    score = score / (L * maxScores.values[pwmIdx]);
+				    score = (score / (L * maxScores.values[pwmIdx])) * 10;
 				    featureHash.put(featureId, score);
 				}
 			}
